@@ -1,0 +1,51 @@
+/* === BLUE === */
+.blue {
+	fill: var(--blue);
+	color: var(--blue);
+}
+
+.blue-bg {
+	background-color: var(--blue);
+}
+
+.trans-blue {
+	fill: var(--trans-blue);
+	color: var(--trans-blue);
+}
+
+.trans-blue-bg {
+	background-color: var(--trans-blue);
+}
+
+/* === GREEN === */
+.green {
+	fill: var(--green);
+	color: var(--green);
+}
+
+.green-bg {
+	background-color: var(--green);
+}
+
+.trans-green {
+	fill: var(--trans-green);
+	color: var(--trans-green);
+}
+
+.trans-green-bg {
+	background-color: var(--trans-green);
+}
+
+/* === ELEMENTS === */
+a {
+	color: var(--blue);
+}
+
+footer {
+	font-size: 14px;
+	text-align: center;
+}
+
+section {
+	height: 200vh !important;
+}

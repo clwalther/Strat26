@@ -1,0 +1,101 @@
+:root {
+	--blue: #0c97f4;
+	--green: #34c759;
+
+	--trans-blue: #0c97f4d9;
+	--trans-green: #34c759d9
+}
+
+/* === LIGHT THEME === */
+@media (prefers-color-scheme: light) {
+	:root {
+		--primary: #1c1c1c;
+		--secondary: #ffffff;
+		--tertiary: #333333;
+		--quatary: #f0f0f0;
+
+		--trans-primary: #1c1c1c36;
+		--trans-secondary: #ffffffba;
+		--trans-tertiary: #33333336;
+		--trans-quatary: #f0f0f0ba;
+	}
+
+	.light {
+		display: block;
+	}
+
+	.dark {
+		display: none
+	}
+}
+
+html[theme=light] {
+	--primary: #1c1c1c;
+	--secondary: #ffffff;
+	--tertiary: #333333;
+	--quatary: #f0f0f0;
+
+	--trans-primary: #1c1c1c36;
+	--trans-secondary: #ffffffba;
+	--trans-tertiary: #33333336;
+	--trans-quatary: #f0f0f0ba;
+}
+
+html[theme=light]:has(div.dialog.visible) {
+	background-color: #0000007a;
+}
+
+html[theme=light] .light {
+	display: block;
+}
+
+html[theme=light] .dark {
+	display: none
+}
+
+/* === DARK THEME === */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--primary: #ffffff;
+		--secondary: #010101;
+		--tertiary: #c6c6c6;
+		--quatary: #1f1f1f;
+
+		--trans-primary: #ffffff36;
+		--trans-secondary: #010101ba;
+		--trans-tertiary: #c6c6c636;
+		--trans-quatary: #1f1f1fba;
+	}
+
+	.light {
+		display: none
+	}
+
+	.dark {
+		display: block;
+	}
+}
+
+html[theme=dark] {
+	--primary: #ffffff;
+	--secondary: #010101;
+	--tertiary: #c6c6c6;
+	--quatary: #1f1f1f;
+
+	--trans-primary: #ffffff36;
+	--trans-secondary: #010101ba;
+	--trans-tertiary: #c6c6c636;
+	--trans-quatary: #1f1f1fba;
+}
+
+html[theme=dark]:has(div.dialog.visible) {
+	background-color: var(--secondary);
+}
+
+html[theme=dark] .light {
+	display: none
+}
+
+html[theme=dark] .dark {
+	display: block;
+}

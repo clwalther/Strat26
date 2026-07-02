@@ -1,0 +1,168 @@
+:root {
+	--header-height: 68px;
+	--aside-width: 0px;
+}
+
+@media (max-width: 600px) or (orientation: landscape) {
+	:root {
+		--input-height: 52px;
+	}
+
+	:root:has(aside[open]) {
+		--aside-width: 100vw;
+	}
+
+	aside>div {
+		width: 100vw;
+	}
+}
+
+@media (min-width: 600px) {
+	:root {
+		--input-height: 44px;
+	}
+
+	:root:has(aside[open]) {
+		--aside-width: 345px;
+	}
+
+	aside>div {
+		width: 345px;
+	}
+}
+
+html {
+	scrollbar-gutter: stable;
+	background-color: var(--quatary);
+}
+
+body {
+	position: absolute;
+	top: 0;
+	left: 0;
+
+	height: fit-content;
+	width: calc(100% - var(--aside-width));
+
+	min-height: 100vh;
+
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	padding-top: var(--header-height);
+	padding-left: var(--aside-width);
+
+	overflow-x: hidden;
+	overflow-y: scroll;
+
+	fill: var(--primary);
+	color: var(--primary);
+
+	background-color: var(--secondary);
+
+	font-family: sans-serif;
+	font-size: 16px;
+
+	white-space: nowrap;
+
+	transition:
+		padding-left 0.2s,
+		width 0.2s;
+}
+
+body:has(dialog:is([open])) {
+	overflow-y: hidden;
+}
+
+header {
+	position: fixed;
+	top: 0;
+	left: 0;
+
+	height: calc(var(--header-height) - 2*6px);
+	width: calc(100% - 2*6px);
+
+	margin: 0;
+	border: 0;
+	padding: 6px;
+
+	display: flex;
+
+	justify-content: space-between;
+
+	overflow-x: hidden;
+	overflow-y: hidden;
+}
+
+aside {
+	position: fixed;
+	top: var(--header-height);
+	left: 0;
+
+	height: calc(100% - var(--header-height));
+	width: var(--aside-width);
+
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	display: grid;
+	justify-content: end;
+	align-content: baseline;
+
+	overflow-x: hidden;
+	overflow-y: scroll;
+
+	scrollbar-width: none;
+
+	transition: width 0.2s;
+}
+
+section {
+	height: fit-content;
+	width: 100%;
+
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	overflow-x: hidden;
+	overflow-y: hidden;
+}
+
+dialog {
+	position: fixed;
+	top: 0;
+	left: 0;
+
+	height: 100%;
+	width: 100%;
+
+	max-height: unset;
+	max-width: unset;
+
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	display: none;
+
+	outline: unset;
+	background: var(--quatary);
+
+	opacity: 0;
+}
+
+dialog[open] {
+	display: block;
+	opacity: 1;
+}
+
+dialog:not([open]) {
+	pointer-events: none;
+}
+
+dialog::backdrop {
+	background-color: var(--quatary);
+}
