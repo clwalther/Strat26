@@ -12,23 +12,41 @@
 		preferedTheme = (scheme.matches ? "light" : "dark");
 
 	if (preferedTheme === "light")
-		html.setAttribute("theme", "light");
+		html.setAttribute("data-theme", "light");
 	else
-		html.setAttribute("theme", "dark");
+		html.setAttribute("data-theme", "dark");
 
 	/**
 	 * Change lighting theme when user changes the browser preference.
+	 * A theme explicitly picked with the toggle button wins over the
+	 * browser preference.
 	 */
 	scheme.addEventListener('change', event => {
-		if (event.matches)
-			html.setAttribute("theme", "light");
-		else
-			html.setAttribute("theme", "dark");
+		if (localStorage.getItem("theme") !== null)
+			return;
 
-		// clear stored preference
-		localStorage.removeItem("theme");
+		if (event.matches)
+			html.setAttribute("data-theme", "light");
+		else
+			html.setAttribute("data-theme", "dark");
 	});
 })();
+
+/**
+ * Button method for toggling the lighting theme.
+ */
+function toggleTheme() {
+	const html = document.getElementsByTagName("html")[0];
+
+	if (html.getAttribute("data-theme") == "dark") {
+		html.setAttribute("data-theme", "light");
+		localStorage.setItem("theme", "light");
+	}
+	else {
+		html.setAttribute("data-theme", "dark");
+		localStorage.setItem("theme", "dark");
+	}
+}
 
 /* TITLE EVENT */
 (() => {

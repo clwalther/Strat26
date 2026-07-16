@@ -3,7 +3,7 @@
 	--green: #34c759;
 
 	--trans-blue: #0c97f4d9;
-	--trans-green: #34c759d9
+	--trans-green: #34c759d9;
 }
 
 /* === LIGHT THEME === */
@@ -29,7 +29,7 @@
 	}
 }
 
-html[theme=light] {
+html[data-theme=light] {
 	--primary: #1c1c1c;
 	--secondary: #ffffff;
 	--tertiary: #333333;
@@ -41,15 +41,11 @@ html[theme=light] {
 	--trans-quatary: #f0f0f0ba;
 }
 
-html[theme=light]:has(div.dialog.visible) {
-	background-color: #0000007a;
-}
-
-html[theme=light] .light {
+html[data-theme=light] .light {
 	display: block;
 }
 
-html[theme=light] .dark {
+html[data-theme=light] .dark {
 	display: none
 }
 
@@ -76,7 +72,7 @@ html[theme=light] .dark {
 	}
 }
 
-html[theme=dark] {
+html[data-theme=dark] {
 	--primary: #ffffff;
 	--secondary: #010101;
 	--tertiary: #c6c6c6;
@@ -88,14 +84,10 @@ html[theme=dark] {
 	--trans-quatary: #1f1f1fba;
 }
 
-html[theme=dark]:has(div.dialog.visible) {
-	background-color: var(--secondary);
-}
-
-html[theme=dark] .light {
+html[data-theme=dark] .light {
 	display: none
 }
 
-html[theme=dark] .dark {
+html[data-theme=dark] .dark {
 	display: block;
 }
