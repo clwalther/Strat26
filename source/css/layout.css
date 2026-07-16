@@ -1,33 +1,29 @@
 :root {
 	--header-height: 68px;
 	--aside-width: 0px;
+	--input-height: 44px;
 }
 
-@media (max-width: 600px) or (orientation: landscape) {
+:root:has(aside[data-open]) {
+	--aside-width: 345px;
+}
+
+aside>div {
+	width: 345px;
+}
+
+/* small screens and phones in landscape */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 600px) {
 	:root {
 		--input-height: 52px;
 	}
 
-	:root:has(aside[open]) {
+	:root:has(aside[data-open]) {
 		--aside-width: 100vw;
 	}
 
 	aside>div {
 		width: 100vw;
-	}
-}
-
-@media (min-width: 600px) {
-	:root {
-		--input-height: 44px;
-	}
-
-	:root:has(aside[open]) {
-		--aside-width: 345px;
-	}
-
-	aside>div {
-		width: 345px;
 	}
 }
 
