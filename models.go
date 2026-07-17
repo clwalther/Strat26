@@ -85,13 +85,13 @@ type CoachEvent struct {
 }
 
 type CoachState struct {
-	Rules   Rules        `json:"rules"`
-	Teams   []CoachTeam  `json:"teams"`
-	Groups  []SquadGroup `json:"groups"`
-	Players []PlayerCard `json:"players"`
-	Match   CoachMatch   `json:"match"`
+	Rules   Rules         `json:"rules"`
+	Teams   []CoachTeam   `json:"teams"`
+	Groups  []SquadGroup  `json:"groups"`
+	Players []PlayerCard  `json:"players"`
+	Match   CoachMatch    `json:"match"`
 	Lineup  []LineupEntry `json:"lineup"`
-	Events  []CoachEvent `json:"events"`
+	Events  []CoachEvent  `json:"events"`
 }
 
 type teamRequest struct {
@@ -110,7 +110,7 @@ type inspectionRequest struct {
 }
 
 type substitutionRequest struct {
-	TeamID     int64 `json:"teamId"`
+	TeamID      int64 `json:"teamId"`
 	OutPlayerID int64 `json:"outPlayerId"`
 	InPlayerID  int64 `json:"inPlayerId"`
 }
