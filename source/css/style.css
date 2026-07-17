@@ -45,3 +45,181 @@ footer {
 	font-size: 14px;
 	text-align: center;
 }
+
+/* === CONTENT === */
+body>section {
+	box-sizing: border-box;
+	padding: 8px 24px 48px;
+
+	white-space: normal;
+}
+
+dialog>section {
+	box-sizing: border-box;
+	max-width: 480px;
+
+	margin: 0 auto;
+	padding: calc(var(--header-height) + 16px) 24px 32px;
+
+	white-space: normal;
+}
+
+body>section footer {
+	margin-top: 64px;
+}
+
+#empty-state {
+	max-width: 420px;
+	margin: 64px auto;
+
+	color: var(--tertiary);
+	text-align: center;
+}
+
+/* === GAME CARDS === */
+#games-list {
+	display: grid;
+	gap: 12px;
+
+	max-width: 720px;
+}
+
+.game-card {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr auto;
+	align-items: center;
+	gap: 12px;
+
+	padding: 12px 16px;
+	border-radius: 16px;
+
+	background: var(--quatary);
+
+	white-space: nowrap;
+}
+
+.game-card .team {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+
+	min-width: 0;
+}
+
+.game-card .team>span:not(.dot) {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.game-card .team.away {
+	justify-content: flex-end;
+}
+
+.game-card .dot {
+	flex: none;
+
+	height: 10px;
+	width: 10px;
+
+	border-radius: 50%;
+}
+
+.game-card .score {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* === BUTTONS === */
+.icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	height: 32px;
+	width: 32px;
+
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	border-radius: 50%;
+
+	fill: var(--tertiary);
+	background: transparent;
+
+	cursor: pointer;
+}
+
+.icon-button:hover {
+	background: var(--trans-tertiary);
+}
+
+.icon-button>svg {
+	height: 20px;
+	width: 20px;
+}
+
+.text-button {
+	height: var(--input-height);
+
+	margin: 0;
+	border: 0;
+	padding: 0 20px;
+
+	border-radius: calc(var(--input-height) / 2);
+
+	color: var(--red);
+	background: var(--secondary);
+
+	font-family: inherit;
+	font-size: 16px;
+
+	cursor: pointer;
+}
+
+/* === FORMS === */
+#add-form {
+	display: grid;
+	gap: 16px;
+}
+
+#add-form label {
+	display: grid;
+	gap: 6px;
+
+	color: var(--tertiary);
+	font-size: 14px;
+}
+
+#add-form select,
+#add-form input {
+	box-sizing: border-box;
+
+	height: var(--input-height);
+	width: 100%;
+
+	margin: 0;
+	border: 1px solid var(--trans-tertiary);
+	padding: 0 12px;
+
+	border-radius: 12px;
+
+	color: var(--primary);
+	background: var(--secondary);
+
+	font-family: inherit;
+	font-size: 16px;
+}
+
+#add-form .score-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+.error {
+	margin: 0;
+
+	color: var(--red);
+	font-size: 14px;
+}
