@@ -1,0 +1,7 @@
+.git
+.github
+database
+strat26
+*.db
+*.db-shm
+*.db-wal
