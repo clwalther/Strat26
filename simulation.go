@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sort"
 	"strings"
 	"time"
 )
@@ -368,28 +367,8 @@ func advanceCoachMatch(db *sql.DB, input advanceRequest) error {
 	target := minInt(match.Minute+minutes, limit)
 	for match.Minute < target {
 		nextMinute := minInt(match.Minute+gameRules.StepMinutes, target)
-		home, err := lineupStrength(tx, match.ID, match.HomeTeamID)
-		if err != nil {
+		if err := simulateInterval(tx, &match, nextMinute, seed); err != nil {
 			return err
-		}
-		away, err := lineupStrength(tx, match.ID, match.AwayTeamID)
-		if err != nil {
-			return err
-		}
-		rng := rand.New(rand.NewSource(seed + int64(nextMinute)*104729))
-		homeChance := goalChance(home.attack+2, away.defense, home.fitness, away.fitness)
-		awayChance := goalChance(away.attack, home.defense, away.fitness, home.fitness)
-		if rng.Float64() < homeChance {
-			match.HomeScore++
-			if err := recordGoal(tx, match, match.HomeTeamID, nextMinute, rng); err != nil {
-				return err
-			}
-		}
-		if rng.Float64() < awayChance {
-			match.AwayScore++
-			if err := recordGoal(tx, match, match.AwayTeamID, nextMinute, rng); err != nil {
-				return err
-			}
 		}
 		match.Minute = nextMinute
 	}
@@ -414,93 +393,303 @@ func advanceCoachMatch(db *sql.DB, input advanceRequest) error {
 	return tx.Commit()
 }
 
-type strength struct {
-	attack  float64
-	defense float64
-	fitness float64
+type lineupProfile struct {
+	attack   float64
+	midfield float64
+	defense  float64
+	keeper   float64
+	fitness  float64
+	morale   float64
+	players  int
 }
 
-func lineupStrength(tx *sql.Tx, matchID, teamID int64) (strength, error) {
+type intervalSummary struct {
+	homePossession float64
+	homeAttacks    int
+	awayAttacks    int
+	homeShots      int
+	awayShots      int
+}
+
+func simulateInterval(tx *sql.Tx, match *CoachMatch, minute int, seed int64) error {
+	home, err := lineupProfileAt(tx, match.ID, match.HomeTeamID, minute)
+	if err != nil {
+		return err
+	}
+	away, err := lineupProfileAt(tx, match.ID, match.AwayTeamID, minute)
+	if err != nil {
+		return err
+	}
+	rng := rand.New(rand.NewSource(seed + int64(minute)*104729))
+	summary := intervalSummary{
+		homePossession: possessionShare(home, away, match.HomeScore, match.AwayScore, minute),
+	}
+	opportunities := gameRules.Simulation.BaseAttacksPerStep
+	if rng.Float64() < percentage(gameRules.Simulation.ExtraAttackChance) {
+		opportunities++
+	}
+	for opportunity := 0; opportunity < opportunities; opportunity++ {
+		homeAttacks := rng.Float64() < summary.homePossession
+		attacker, defender := away, home
+		attackingTeamID := match.AwayTeamID
+		trailing := match.AwayScore < match.HomeScore
+		if homeAttacks {
+			attacker, defender = home, away
+			attackingTeamID = match.HomeTeamID
+			trailing = match.HomeScore < match.AwayScore
+			summary.homeAttacks++
+		} else {
+			summary.awayAttacks++
+		}
+		if rng.Float64() >= buildUpChance(attacker, defender, trailing, minute) {
+			continue
+		}
+		if homeAttacks {
+			summary.homeShots++
+		} else {
+			summary.awayShots++
+		}
+		goal, err := resolveShot(tx, *match, attackingTeamID, minute, attacker, defender, rng)
+		if err != nil {
+			return err
+		}
+		if goal && homeAttacks {
+			match.HomeScore++
+		} else if goal {
+			match.AwayScore++
+		}
+	}
+	text := fmt.Sprintf(
+		"Simulationsmodell: Ballbesitz Grün %.0f%% · Blau %.0f%% | Angriffe %d:%d | Abschlüsse %d:%d.",
+		summary.homePossession*100, (1-summary.homePossession)*100,
+		summary.homeAttacks, summary.awayAttacks, summary.homeShots, summary.awayShots,
+	)
+	return insertEventAt(tx, *match, minute, "simulation", nil, nil, text)
+}
+
+func lineupProfileAt(tx *sql.Tx, matchID, teamID int64, minute int) (lineupProfile, error) {
 	rows, err := tx.Query(`
-		SELECT p.attack, p.defense, p.fitness, p.morale
+		SELECT p.position, p.attack, p.defense, p.fitness, p.morale, l.entered_at
 		FROM coach_lineups l JOIN player_cards p ON p.id = l.player_id
 		WHERE l.match_id = ? AND l.team_id = ? AND l.on_field = 1 AND p.suspended = 0`, matchID, teamID)
 	if err != nil {
-		return strength{}, err
+		return lineupProfile{}, err
 	}
 	defer rows.Close()
-	var result strength
-	count := 0
+	var result lineupProfile
+	var attackWeight, midfieldWeight, defenseWeight float64
+	positionCounts := map[string]int{}
 	for rows.Next() {
-		var attack, defense, fitness, morale int
-		if err := rows.Scan(&attack, &defense, &fitness, &morale); err != nil {
-			return strength{}, err
+		var position string
+		var attack, defense, fitness, morale, enteredAt int
+		if err := rows.Scan(&position, &attack, &defense, &fitness, &morale, &enteredAt); err != nil {
+			return lineupProfile{}, err
 		}
-		result.attack += float64(attack) + float64(morale-50)*0.08
-		result.defense += float64(defense) + float64(morale-50)*0.06
-		result.fitness += float64(fitness)
-		count++
+		fatigue := fatigueFactor(fitness, maxInt(0, minute-enteredAt))
+		moraleFactor := 0.9 + float64(morale)/700
+		effectiveAttack := float64(attack) * fatigue * moraleFactor
+		effectiveDefense := float64(defense) * fatigue * moraleFactor
+		effectiveFitness := float64(fitness) * fatigue
+		weights := positionWeights(position)
+		result.attack += effectiveAttack * weights.attack
+		attackWeight += weights.attack
+		midfieldValue := effectiveAttack*0.52 + effectiveDefense*0.48
+		result.midfield += midfieldValue * weights.midfield
+		midfieldWeight += weights.midfield
+		result.defense += effectiveDefense * weights.defense
+		defenseWeight += weights.defense
+		if position == "GK" {
+			keeper := effectiveDefense*0.78 + effectiveFitness*0.14 + float64(morale)*0.08
+			result.keeper = maxFloat(result.keeper, keeper)
+		}
+		result.fitness += effectiveFitness
+		result.morale += float64(morale)
+		result.players++
+		positionCounts[position]++
 	}
 	if err := rows.Err(); err != nil {
-		return strength{}, err
+		return lineupProfile{}, err
 	}
-	if count == 0 {
-		return strength{}, errors.New("team has no eligible field players")
+	if result.players == 0 {
+		return lineupProfile{}, errors.New("team has no eligible field players")
 	}
-	result.attack /= float64(gameRules.FieldPlayers)
-	result.defense /= float64(gameRules.FieldPlayers)
-	result.fitness /= float64(gameRules.FieldPlayers)
+	result.attack /= attackWeight
+	result.midfield /= midfieldWeight
+	result.defense /= defenseWeight
+	result.fitness /= float64(result.players)
+	result.morale /= float64(result.players)
+	result.attack *= clampFloat((float64(positionCounts["FWD"])+float64(positionCounts["MID"])*0.25)/3, 0.6, 1.1)
+	result.midfield *= clampFloat((float64(positionCounts["MID"])+float64(positionCounts["DEF"])*0.15+float64(positionCounts["FWD"])*0.15)/4.9, 0.6, 1.1)
+	result.defense *= clampFloat((float64(positionCounts["DEF"])+float64(positionCounts["MID"])*0.2)/4.8, 0.6, 1.1)
+	coverage := clampFloat(float64(result.players)/float64(gameRules.FieldPlayers), 0.5, 1)
+	result.attack *= coverage
+	result.midfield *= coverage
+	result.defense *= coverage
+	if result.keeper == 0 {
+		result.keeper = result.defense * 0.55
+	}
 	return result, nil
 }
 
-func goalChance(attack, opponentDefense, fitness, opponentFitness float64) float64 {
-	chance := 0.065 + (attack-opponentDefense)/520 + (fitness-opponentFitness)/1200
-	return clampFloat(chance, 0.015, 0.18)
+type roleWeights struct {
+	attack   float64
+	midfield float64
+	defense  float64
 }
 
-func recordGoal(tx *sql.Tx, match CoachMatch, teamID int64, minute int, rng *rand.Rand) error {
+func positionWeights(position string) roleWeights {
+	switch position {
+	case "GK":
+		return roleWeights{attack: 0.05, midfield: 0.05, defense: 0.2}
+	case "DEF":
+		return roleWeights{attack: 0.25, midfield: 0.35, defense: 1.15}
+	case "MID":
+		return roleWeights{attack: 0.75, midfield: 1.2, defense: 0.55}
+	default:
+		return roleWeights{attack: 1.25, midfield: 0.45, defense: 0.15}
+	}
+}
+
+func fatigueFactor(fitness, minutesPlayed int) float64 {
+	load := float64(minutesPlayed) * (1 + float64(100-fitness)/100)
+	return clampFloat(1-load/700, 0.72, 1)
+}
+
+func possessionShare(home, away lineupProfile, homeScore, awayScore, minute int) float64 {
+	share := 0.5 + (home.midfield-away.midfield)/240 + (home.morale-away.morale)/1400
+	share += percentage(gameRules.Simulation.HomeAdvantage)
+	urgency := 0.015
+	if minute >= 70 {
+		urgency += 0.02
+	}
+	if homeScore < awayScore {
+		share += urgency
+	} else if awayScore < homeScore {
+		share -= urgency
+	}
+	return clampFloat(share, percentage(gameRules.Simulation.MinimumPossession), percentage(gameRules.Simulation.MaximumPossession))
+}
+
+func buildUpChance(attacker, defender lineupProfile, trailing bool, minute int) float64 {
+	chance := 0.54 + (attacker.midfield-defender.midfield)/300 + (attacker.fitness-defender.fitness)/700
+	if trailing {
+		chance += 0.015
+		if minute >= 70 {
+			chance += 0.025
+		}
+	}
+	return clampFloat(chance, percentage(gameRules.Simulation.MinimumBuildUpChance), percentage(gameRules.Simulation.MaximumBuildUpChance))
+}
+
+func finishChance(attacker, defender lineupProfile) float64 {
+	chance := 0.15 + (attacker.attack-defender.defense)/420 - (defender.keeper-65)/520
+	chance += (attacker.morale-defender.morale)/1800 + (attacker.fitness-defender.fitness)/1400
+	return clampFloat(chance, percentage(gameRules.Simulation.MinimumFinishChance), percentage(gameRules.Simulation.MaximumFinishChance))
+}
+
+type shooter struct {
+	id   int64
+	name string
+}
+
+func resolveShot(tx *sql.Tx, match CoachMatch, teamID int64, minute int, attacker, defender lineupProfile, rng *rand.Rand) (bool, error) {
+	player, err := pickShooter(tx, match.ID, teamID, minute, rng)
+	if err != nil {
+		return false, err
+	}
+	chance := finishChance(attacker, defender)
+	roll := rng.Float64()
+	if roll < chance {
+		text := fmt.Sprintf("Tor für %s durch %s!", coachTeamName(teamID), player.name)
+		if err := insertEventAt(tx, match, minute, "goal", &teamID, &player.id, text); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	saveChance := clampFloat(0.24+(defender.keeper-65)/500, 0.16, 0.36)
+	if roll < chance+saveChance {
+		keeper, err := goalkeeperName(tx, match.ID, opposingTeamID(match, teamID))
+		if err != nil {
+			return false, err
+		}
+		text := fmt.Sprintf("%s pariert den Abschluss von %s.", keeper, player.name)
+		return false, insertEventAt(tx, match, minute, "save", &teamID, &player.id, text)
+	}
+	text := fmt.Sprintf("%s setzt den Abschluss für %s daneben.", player.name, coachTeamName(teamID))
+	return false, insertEventAt(tx, match, minute, "miss", &teamID, &player.id, text)
+}
+
+func pickShooter(tx *sql.Tx, matchID, teamID int64, minute int, rng *rand.Rand) (shooter, error) {
 	rows, err := tx.Query(`
-		SELECT p.id, p.name, p.attack FROM coach_lineups l
+		SELECT p.id, p.name, p.position, p.attack, p.fitness, p.morale, l.entered_at FROM coach_lineups l
 		JOIN player_cards p ON p.id = l.player_id
 		WHERE l.match_id = ? AND l.team_id = ? AND l.on_field = 1 AND p.suspended = 0
-		ORDER BY p.position = 'FWD' DESC, p.position = 'MID' DESC, p.number`, match.ID, teamID)
+		ORDER BY p.position = 'FWD' DESC, p.position = 'MID' DESC, p.number`, matchID, teamID)
 	if err != nil {
-		return err
+		return shooter{}, err
 	}
-	type scorer struct {
-		id     int64
-		name   string
+	type candidate struct {
+		shooter
 		weight int
 	}
-	scorers := []scorer{}
+	candidates := []candidate{}
 	total := 0
 	for rows.Next() {
-		var player scorer
-		if err := rows.Scan(&player.id, &player.name, &player.weight); err != nil {
+		var player candidate
+		var position string
+		var attack, fitness, morale, enteredAt int
+		if err := rows.Scan(&player.id, &player.name, &position, &attack, &fitness, &morale, &enteredAt); err != nil {
 			rows.Close()
-			return err
+			return shooter{}, err
 		}
-		player.weight = maxInt(player.weight, 1)
+		positionFactor := map[string]float64{"GK": 0.12, "DEF": 0.55, "MID": 1.05, "FWD": 1.45}[position]
+		effectiveAttack := float64(attack) * fatigueFactor(fitness, maxInt(0, minute-enteredAt))
+		player.weight = maxInt(int(effectiveAttack*positionFactor+float64(morale)*0.1), 1)
 		total += player.weight
-		scorers = append(scorers, player)
+		candidates = append(candidates, player)
 	}
 	if err := rows.Close(); err != nil {
-		return err
+		return shooter{}, err
 	}
-	if len(scorers) == 0 {
-		return errors.New("no scorer available")
+	if len(candidates) == 0 {
+		return shooter{}, errors.New("no shooter available")
 	}
 	pick := rng.Intn(total)
-	selected := scorers[0]
-	for _, player := range scorers {
+	selected := candidates[0]
+	for _, player := range candidates {
 		pick -= player.weight
 		if pick < 0 {
 			selected = player
 			break
 		}
 	}
-	text := fmt.Sprintf("Tor für %s durch %s!", map[int64]string{1: "Team Grün", 2: "Team Blau"}[teamID], selected.name)
-	return insertEventAt(tx, match, minute, "goal", &teamID, &selected.id, text)
+	return selected.shooter, nil
+}
+
+func goalkeeperName(tx *sql.Tx, matchID, teamID int64) (string, error) {
+	var name string
+	err := tx.QueryRow(`
+		SELECT p.name FROM coach_lineups l JOIN player_cards p ON p.id = l.player_id
+		WHERE l.match_id = ? AND l.team_id = ? AND l.on_field = 1 AND p.suspended = 0
+		ORDER BY (p.position = 'GK') DESC, p.defense DESC LIMIT 1`, matchID, teamID).Scan(&name)
+	return name, err
+}
+
+func opposingTeamID(match CoachMatch, teamID int64) int64 {
+	if teamID == match.HomeTeamID {
+		return match.AwayTeamID
+	}
+	return match.HomeTeamID
+}
+
+func coachTeamName(teamID int64) string {
+	if teamID == 1 {
+		return "Team Grün"
+	}
+	if teamID == 2 {
+		return "Team Blau"
+	}
+	return fmt.Sprintf("Team %d", teamID)
 }
 
 func insertEventAt(tx *sql.Tx, match CoachMatch, minute int, kind string, teamID, playerID *int64, text string) error {
@@ -545,11 +734,13 @@ func maxInt(a, b int) int {
 	return b
 }
 
-func sortedPlayerIDs(players []PlayerCard) []int64 {
-	sort.Slice(players, func(i, j int) bool { return players[i].Number < players[j].Number })
-	ids := make([]int64, len(players))
-	for index, player := range players {
-		ids[index] = player.ID
+func maxFloat(a, b float64) float64 {
+	if a > b {
+		return a
 	}
-	return ids
+	return b
+}
+
+func percentage(value int) float64 {
+	return float64(value) / 100
 }

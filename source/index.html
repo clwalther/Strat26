@@ -76,6 +76,7 @@
 
 			<section class="view" id="view-spiel">
 				<div class="match-board panel"><div class="match-team"><i class="team-crest green">G</i><strong>Team Grün</strong></div><div class="match-center"><span id="match-phase">Vorbereitung</span><div><b id="match-home-score">0</b><i>:</i><b id="match-away-score">0</b></div><small><strong id="match-minute">0</strong>. Minute</small><button class="button primary" id="advance-match" type="button">5 Minuten spielen</button></div><div class="match-team"><i class="team-crest blue">B</i><strong>Team Blau</strong></div></div>
+				<div class="panel simulation-explainer"><div><p class="eyebrow">Serverseitige Simulation</p><h3>So entsteht das Spielergebnis</h3><p>Aufstellung, Kartenwerte und Entscheidungen wirken in jedem Fünf-Minuten-Intervall.</p></div><div class="simulation-chain"><span>Ballbesitz</span><i>→</i><span>Angriff</span><i>→</i><span>Abschluss</span><i>→</i><span>Torwart</span><i>→</i><span>Ereignis</span></div><code id="simulation-model">possession-attack-finish-v2</code></div>
 				<div class="panel timeline-panel"><div class="section-head"><div><p class="eyebrow">Chronik</p><h3>Spiel- & Aktionsverlauf</h3></div><button class="button ghost danger" id="reset-game" type="button">Spiel zurücksetzen</button></div><div class="feed" id="event-feed"></div></div>
 			</section>
 		</main>

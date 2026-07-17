@@ -103,6 +103,7 @@
 		for (const id of ["hero-away-score", "match-away-score"]) document.getElementById(id).textContent = match.awayScore;
 		for (const id of ["hero-minute", "match-minute"]) document.getElementById(id).textContent = match.minute;
 		const finished = match.phase === "finished";
+		document.getElementById("simulation-model").textContent = state.rules.simulation.model;
 		for (const id of ["hero-advance", "advance-match"]) {
 			const button = document.getElementById(id);
 			button.disabled = finished;
@@ -139,7 +140,7 @@
 	}
 
 	function eventHTML(event) {
-		const icons = { goal: "⚽", training: "↗", doping: "!", inspection: "⌕", sponsor: "♫", substitution: "⇄", kickoff: "▶", halftime: "Ⅱ", fulltime: "■", setup: "●" };
+		const icons = { goal: "⚽", save: "◇", miss: "↗", simulation: "∿", training: "↗", doping: "!", inspection: "⌕", sponsor: "♫", substitution: "⇄", kickoff: "▶", halftime: "Ⅱ", fulltime: "■", setup: "●" };
 		return `<article class="event ${event.kind}"><span>${event.minute}'</span><i class="event-icon">${icons[event.kind] || "·"}</i><span>${escapeHTML(event.text)}</span></article>`;
 	}
 

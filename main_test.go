@@ -202,6 +202,89 @@ func TestMatchCanRunToFullTime(t *testing.T) {
 	}
 }
 
+func TestSimulationIsDeterministicAndAuditable(t *testing.T) {
+	_, firstServer := testApplication(t)
+	_, secondServer := testApplication(t)
+	firstResponse := performRequest(t, firstServer, http.MethodPost, "/api/match/advance", `{"minutes":15,"seed":4242}`)
+	secondResponse := performRequest(t, secondServer, http.MethodPost, "/api/match/advance", `{"minutes":15,"seed":4242}`)
+	if firstResponse.Code != http.StatusOK || secondResponse.Code != http.StatusOK {
+		t.Fatalf("deterministic simulation failed: %d / %d", firstResponse.Code, secondResponse.Code)
+	}
+	first := decodeResponse[CoachState](t, firstResponse)
+	second := decodeResponse[CoachState](t, secondResponse)
+	if first.Match.HomeScore != second.Match.HomeScore || first.Match.AwayScore != second.Match.AwayScore {
+		t.Fatalf("same seed produced different scores: %+v / %+v", first.Match, second.Match)
+	}
+	if len(first.Events) != len(second.Events) {
+		t.Fatalf("same seed produced different event counts: %d / %d", len(first.Events), len(second.Events))
+	}
+	simulationEvents := 0
+	for index := range first.Events {
+		left, right := first.Events[index], second.Events[index]
+		if left.Minute != right.Minute || left.Kind != right.Kind || left.Text != right.Text {
+			t.Fatalf("same seed produced a different event at %d: %+v / %+v", index, left, right)
+		}
+		if left.Kind == "simulation" {
+			simulationEvents++
+			if !strings.Contains(left.Text, "Ballbesitz") || !strings.Contains(left.Text, "Abschlüsse") {
+				t.Fatalf("simulation event is not auditable: %q", left.Text)
+			}
+		}
+	}
+	if simulationEvents != 3 {
+		t.Fatalf("expected one simulation report per interval, got %d", simulationEvents)
+	}
+}
+
+func TestSimulationFactorsAreBoundedAndResponsive(t *testing.T) {
+	balanced := lineupProfile{attack: 70, midfield: 70, defense: 70, keeper: 70, fitness: 70, morale: 70}
+	level := possessionShare(balanced, balanced, 0, 0, 75)
+	trailing := possessionShare(balanced, balanced, 0, 1, 75)
+	if trailing <= level {
+		t.Fatalf("a trailing team must become more aggressive: %.3f <= %.3f", trailing, level)
+	}
+	weak := lineupProfile{attack: 0, fitness: 0, morale: 0}
+	strongDefense := lineupProfile{defense: 100, keeper: 100, fitness: 100, morale: 100}
+	if got := finishChance(weak, strongDefense); got != percentage(gameRules.Simulation.MinimumFinishChance) {
+		t.Fatalf("finish chance is not limited at the bottom: %.3f", got)
+	}
+	strongAttack := lineupProfile{attack: 100, fitness: 100, morale: 100}
+	weakDefense := lineupProfile{defense: 0, keeper: 0, fitness: 0, morale: 0}
+	if got := finishChance(strongAttack, weakDefense); got != percentage(gameRules.Simulation.MaximumFinishChance) {
+		t.Fatalf("finish chance is not limited at the top: %.3f", got)
+	}
+	if fatigueFactor(70, 90) >= fatigueFactor(70, 0) {
+		t.Fatal("playing time must reduce effective fitness")
+	}
+}
+
+func TestLineupProfileUsesPositionsAndFatigue(t *testing.T) {
+	db, _ := testApplication(t)
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	match, err := currentCoachMatch(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh, err := lineupProfileAt(tx, match.ID, match.HomeTeamID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tired, err := lineupProfileAt(tx, match.ID, match.HomeTeamID, 90)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.players != gameRules.FieldPlayers || fresh.attack <= 0 || fresh.midfield <= 0 || fresh.defense <= 0 || fresh.keeper <= 0 {
+		t.Fatalf("invalid positional profile: %+v", fresh)
+	}
+	if tired.attack >= fresh.attack || tired.midfield >= fresh.midfield || tired.defense >= fresh.defense || tired.fitness >= fresh.fitness {
+		t.Fatalf("fatigue did not affect the lineup: fresh=%+v tired=%+v", fresh, tired)
+	}
+}
+
 func TestCardResponsibilityCanMoveWithinTeam(t *testing.T) {
 	_, server := testApplication(t)
 	response := performRequest(t, server, http.MethodPatch, "/api/players/1/group", `{"groupId":2}`)

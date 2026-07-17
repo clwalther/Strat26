@@ -221,6 +221,13 @@ select:focus, input:focus { border-color: var(--green); box-shadow: 0 0 0 3px va
 .match-center small { color: var(--muted); font-size: 10px; }
 .match-center .button { margin-top: 7px; }
 .timeline-panel { margin-top: 15px; }
+.simulation-explainer { margin-top: 15px; padding: 20px 23px; display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; align-items: center; gap: 20px; }
+.simulation-explainer h3 { margin: 4px 0 6px; }
+.simulation-explainer p { margin: 0; color: var(--muted); }
+.simulation-explainer code { color: var(--accent); font-size: 10px; }
+.simulation-chain { display: flex; align-items: center; gap: 7px; }
+.simulation-chain span { padding: 7px 9px; border-radius: 7px; background: var(--surface-2); font-size: 9px; font-weight: 700; }
+.simulation-chain i { color: var(--muted); font-style: normal; }
 .feed { margin-top: 17px; display: grid; gap: 7px; }
 .feed.compact { max-height: 205px; overflow: hidden; }
 .event { padding: 10px 11px; display: grid; grid-template-columns: 35px 27px minmax(0, 1fr); align-items: center; gap: 8px; background: var(--surface-2); border-radius: 9px; font-size: 9px; }
@@ -247,6 +254,8 @@ dialog::backdrop { background: rgba(3, 9, 6, .75); backdrop-filter: blur(7px); }
 @media (max-width: 1100px) {
 	.card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 	.action-grid { grid-template-columns: 1fr 1fr; }
+	.simulation-explainer { grid-template-columns: 1fr; }
+	.simulation-chain { flex-wrap: wrap; }
 	.action-card:last-child { grid-column: 1 / -1; }
 	.lineup-layout { grid-template-columns: 1fr; }
 	.pitch { min-height: 590px; }

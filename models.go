@@ -1,5 +1,18 @@
 package main
 
+type SimulationRules struct {
+	Model                 string `json:"model"`
+	BaseAttacksPerStep    int    `json:"baseAttacksPerStep"`
+	ExtraAttackChance     int    `json:"extraAttackChance"`
+	MinimumPossession     int    `json:"minimumPossession"`
+	MaximumPossession     int    `json:"maximumPossession"`
+	MinimumBuildUpChance  int    `json:"minimumBuildUpChance"`
+	MaximumBuildUpChance  int    `json:"maximumBuildUpChance"`
+	MinimumFinishChance   int    `json:"minimumFinishChance"`
+	MaximumFinishChance   int    `json:"maximumFinishChance"`
+	HomeAdvantage         int    `json:"homeAdvantage"`
+}
+
 type Rules struct {
 	FieldPlayers     int `json:"fieldPlayers"`
 	MaxSubstitutions int `json:"maxSubstitutions"`
@@ -10,12 +23,19 @@ type Rules struct {
 	DopingCost       int `json:"dopingCost"`
 	DopingGain       int `json:"dopingGain"`
 	DopingRisk       int `json:"dopingRisk"`
+	Simulation       SimulationRules `json:"simulation"`
 }
 
 var gameRules = Rules{
 	FieldPlayers: 11, MaxSubstitutions: 5, StepMinutes: 5,
 	SponsorReward: 4, TrainingCost: 2, TrainingGain: 2,
 	DopingCost: 1, DopingGain: 3, DopingRisk: 30,
+	Simulation: SimulationRules{
+		Model: "possession-attack-finish-v2", BaseAttacksPerStep: 1, ExtraAttackChance: 35,
+		MinimumPossession: 28, MaximumPossession: 72,
+		MinimumBuildUpChance: 35, MaximumBuildUpChance: 78,
+		MinimumFinishChance: 6, MaximumFinishChance: 32, HomeAdvantage: 2,
+	},
 }
 
 type CoachTeam struct {

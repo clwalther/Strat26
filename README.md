@@ -42,6 +42,12 @@ Startwerte bewusst an einer Stelle in `models.go` gebündelt:
 | Trainingscamp | 2 Hymnen, +2 auf einen gewählten Wert |
 | Doping | 1 Hymne, +3 Angriff und Fitness |
 | zusätzliches Dopingrisiko | +30 |
+| Simulationsmodell | `possession-attack-finish-v2` |
+| Angriffe je 5 Minuten | 1, zu 35 % ein zweiter Angriff |
+| Ballbesitz-Korridor | 28–72 % |
+| erfolgreiche Angriffsaufbauten | 35–78 % |
+| Torwahrscheinlichkeit je Abschluss | 6–32 % |
+| Heimvorteil im Ballbesitz | +2 Prozentpunkte |
 
 Diese Zahlen sind keine Behauptung über das endgültige Regelheft. Sie sind
 konfigurierbare Defaults, damit die Mechanik vollständig spielbar und später
@@ -70,11 +76,33 @@ rückt automatisch eine geeignete, erlaubte Karte nach.
 
 ### Fußballspiel
 
-Die Partie läuft in Schritten von fünf Minuten. Angriff, Abwehr, Fitness und
-Moral der elf eingesetzten Karten beeinflussen die Torchance. Torschützen
-werden gewichtet nach Angriffswert aus den Feldspielern bestimmt. Vor dem
-Anpfiff sind Aufstellungsänderungen frei; im laufenden Spiel werden Wechsel bis
-zum konfigurierten Limit gezählt.
+Die Partie läuft in Schritten von fünf Minuten und wird vollständig im Backend
+berechnet. Jeder Schritt durchläuft dieselbe nachvollziehbare Kette:
+
+1. Aus den elf eingesetzten Karten entsteht ein Positionsprofil für Angriff,
+   Mittelfeld, Abwehr, Torwart, Fitness und Moral.
+2. Mittelfeld, Moral, Heimvorteil und Spielstand bestimmen den Ballbesitz.
+3. Aus dem Ballbesitz entstehen ein oder zwei Angriffe.
+4. Mittelfeld und Fitness entscheiden, ob der Angriffsaufbau zum Abschluss
+   führt.
+5. Angriff, gegnerische Abwehr, Torwart, Fitness und Moral entscheiden zwischen
+   Tor, Parade und Fehlschuss.
+6. Der Schütze wird nach Position, Angriff, Fitness, Moral und Einsatzzeit
+   gewichtet ausgewählt.
+
+Einsatzzeit erzeugt Ermüdung. Ein später eingewechselter Spieler ist deshalb
+frischer als ein Spieler, der bereits 80 Minuten auf dem Feld steht. Ein
+Rückstand erhöht besonders in der Schlussphase die Angriffslust, garantiert
+aber kein Tor. Unpassende Formationen sowie ein fehlender Torwart erhalten
+spürbare Positionsnachteile.
+
+Zu jedem Fünf-Minuten-Intervall speichert die Chronik Ballbesitz, Angriffe und
+Abschlüsse; Tore, Paraden und Fehlschüsse werden als eigene Ereignisse
+protokolliert. Der Zufallsgenerator verwendet einen Seed. Identische Karten,
+Aufstellungen, Aktionen und Seeds ergeben dadurch identische Partien.
+
+Vor dem Anpfiff sind Aufstellungsänderungen frei; im laufenden Spiel werden
+Wechsel bis zum konfigurierten Limit gezählt.
 
 ## Starten
 
@@ -158,8 +186,9 @@ go vet ./...
 
 Abgedeckt sind Initialisierung der 52 Karten, Gruppenverantwortung, Sponsor-
 und Hymnenlogik, Training, Doping und sichere FIFA-Entdeckung, automatische
-Ersatzspieler, Wechselzählung, kompletter Matchverlauf, API-Validierung und die
-nicht-destruktive Koexistenz mit älteren Datenbanktabellen.
+Ersatzspieler, Wechselzählung, kompletter Matchverlauf, deterministische Seeds,
+Simulationsprotokolle, Grenzwerte, Positionsprofile, Ermüdung, API-Validierung
+und die nicht-destruktive Koexistenz mit älteren Datenbanktabellen.
 
 > Die Mechanik ist serverseitig autoritativ. Ein rein statisches Deployment
 > kann das Charaktersheet anzeigen, aber Aktionen und Persistenz benötigen das
