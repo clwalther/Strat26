@@ -1,24 +1,82 @@
-# Strat26
+# Strategiespiel 2026 – Station Zentrale / Coach
 
-Strat26 ist ein vollständiges Turnierzentrum für acht Gruppen: Spielplan,
-persistente Ergebnisse, reproduzierbare Spielsimulation, Ereignis-Timeline und
-Live-Tabelle in einer responsiven Web-App.
+Strat26 ist das digitale Charaktersheet der Station **Zentrale – Coach**. Die
+Anwendung bildet nicht acht gegeneinander spielende Teams ab, sondern genau
+die Mechanik des Strategiespiels:
 
-## Funktionsumfang
+- **zwei Fußballmannschaften**: Team Grün und Team Blau,
+- **vier Untergruppen je Mannschaft**,
+- **26 gemeinsame Spielerkarten je Mannschaft**,
+- Kartenverantwortung und Abstimmung zwischen den vier Gruppen,
+- Startelf, Bank und Auswechslungen,
+- Aufwertung im Trainingscamp,
+- stärkere, aber riskante Aufwertung durch Doping,
+- Hymnen als Ressource, die durch Sponsoren gewonnen werden,
+- Kontrollen von Gruppen und Spielerkarten durch die FIFA-Behörde,
+- ein gemeinsames Fußballspiel mit Ereignisverlauf.
 
-- **Go-Backend** auf Basis der Standardbibliothek (`net/http`)
-- **SQLite-Datenbank** mit Teams, Saison, Spielen und Spielereignissen
-- automatische, verlustfreie Migration der bisherigen `games`-Tabelle
-- kompletter Spielplan mit 16 Begegnungen in vier Spieltagen
-- Simulation über ratingsensitive Poisson-Verteilungen
-- reproduzierbare Resultate über einen optionalen Seed
-- Tor- und Kartenereignisse je Spiel
-- manuelle Ergebnisse und frei anlegbare Begegnungen
-- Tabelle mit Punkten, Toren und Tordifferenz
-- Dashboard mit Filtern, Detaildialogen, Dark/Light Theme und Offline-Fallback
-- Healthcheck, Security-Header, Request-Limits und Graceful Shutdown
+## Coach-Zentrale
 
-## Schnellstart
+Die Oberfläche ist auf die Aufgaben der Zentrale zugeschnitten:
+
+1. **Zentrale** – Lagebild, Ressourcen, Gruppenverantwortung und Meldungen
+2. **Spielerkarten** – alle 26 Karten eines Teams, Werte, Status und zuständige Gruppe
+3. **Aufstellung** – elf Feldspieler, Bank und maximal fünf Wechsel im Spiel
+4. **Aktionen** – Sponsoren, Trainingscamp, Doping und FIFA-Gruppenkontrollen
+5. **Spielverlauf** – Ergebnis, Spielphase und vollständige Chronik
+
+Zwischen Team Grün und Team Blau kann jederzeit umgeschaltet werden. Beide
+Teams besitzen je einen eigenen Kader und Hymnenvorrat.
+
+## Regelwerte
+
+Da die Kurzbeschreibung keine konkreten Zahlen vorgibt, sind die technischen
+Startwerte bewusst an einer Stelle in `models.go` gebündelt:
+
+| Regel | Standard |
+| --- | ---: |
+| Feldspieler | 11 |
+| maximale Wechsel im laufenden Spiel | 5 |
+| Simulationsschritt | 5 Minuten |
+| Sponsor-Ertrag | 4 Hymnen |
+| Trainingscamp | 2 Hymnen, +2 auf einen gewählten Wert |
+| Doping | 1 Hymne, +3 Angriff und Fitness |
+| zusätzliches Dopingrisiko | +30 |
+
+Diese Zahlen sind keine Behauptung über das endgültige Regelheft. Sie sind
+konfigurierbare Defaults, damit die Mechanik vollständig spielbar und später
+ohne Umbau anpassbar ist.
+
+## Mechanik
+
+### Karten und Gruppen
+
+Jede Mannschaft erhält beim ersten Start 26 Spielerkarten. Jede Karte gehört
+dem gemeinsamen Teamkader, wird aber von genau einer der vier Untergruppen
+verwahrt. Die Zentrale kann die Verantwortung innerhalb desselben Teams
+übertragen. Eine Übergabe an eine Gruppe des Gegners verhindert das Backend.
+
+### Training und Doping
+
+Das Trainingscamp verbessert gezielt Angriff, Abwehr, Fitness oder Moral und
+kostet Hymnen. Doping verbessert Angriff und Fitness stärker, erhöht aber den
+verdeckten Dopingwert der Karte sowie die FIFA-Aufmerksamkeit der zuständigen
+Gruppe.
+
+Bei einer FIFA-Kontrolle werden alle Karten dieser Gruppe geprüft. Die
+Entdeckungswahrscheinlichkeit steigt mit Dopingwert und Gruppenaufmerksamkeit.
+Entdeckte Spieler werden gesperrt. War ein gesperrter Spieler auf dem Feld,
+rückt automatisch eine geeignete, erlaubte Karte nach.
+
+### Fußballspiel
+
+Die Partie läuft in Schritten von fünf Minuten. Angriff, Abwehr, Fitness und
+Moral der elf eingesetzten Karten beeinflussen die Torchance. Torschützen
+werden gewichtet nach Angriffswert aus den Feldspielern bestimmt. Vor dem
+Anpfiff sind Aufstellungsänderungen frei; im laufenden Spiel werden Wechsel bis
+zum konfigurierten Limit gezählt.
+
+## Starten
 
 Voraussetzungen: Go 1.25 oder Docker.
 
@@ -26,107 +84,83 @@ Voraussetzungen: Go 1.25 oder Docker.
 go run .
 ```
 
-Danach ist die App unter <http://localhost:8080> erreichbar. Beim ersten Start
-werden `database/database.db`, das aktuelle Schema, acht Teams und die Saison
-2026 automatisch angelegt.
-
-Konfiguration:
-
-| Variable | Standard | Bedeutung |
-| --- | --- | --- |
-| `PORT` | `8080` | HTTP-Port |
-| `DATABASE_PATH` | `./database/database.db` | Pfad zur SQLite-Datei |
-
-### Docker
+Die Anwendung läuft unter <http://localhost:8080>. Die SQLite-Datenbank wird
+standardmäßig unter `database/database.db` angelegt.
 
 ```sh
 docker compose up --build
 ```
 
-Die Datenbank liegt dabei in einem benannten Volume und überlebt einen
-Container-Neustart.
-
-## Simulation
-
-Jedes Team besitzt ein Rating. Aus Rating-Differenz und Heimvorteil berechnet
-die Engine für beide Teams eine Torerwartung. Die Tore werden per
-Poisson-Verteilung gezogen; dazu entsteht eine chronologisch sortierte
-Timeline aus Toren und gelben Karten.
-
-Ein identischer Seed erzeugt für dasselbe Spiel dasselbe Ergebnis und dieselbe
-Timeline:
-
-```sh
-curl -X POST http://localhost:8080/api/games/1/simulate \
-  -H 'Content-Type: application/json' \
-  -d '{"seed":42}'
-```
+| Variable | Standard | Bedeutung |
+| --- | --- | --- |
+| `PORT` | `8080` | HTTP-Port |
+| `DATABASE_PATH` | `./database/database.db` | SQLite-Datei |
 
 ## REST-API
 
 | Methode | Pfad | Zweck |
 | --- | --- | --- |
-| `GET` | `/api/health` | Datenbank-Healthcheck |
-| `GET` | `/api/state` | kompletter Dashboard-Zustand |
-| `GET` | `/api/teams` | Teams und Ratings |
-| `GET` | `/api/seasons/current` | aktive Saison |
-| `GET` | `/api/games` | Spiele; Filter `status` und `team` |
-| `POST` | `/api/games` | Begegnung bzw. manuelles Ergebnis anlegen |
-| `GET` | `/api/games/{id}` | Spiel inklusive Ereignissen |
-| `PATCH` | `/api/games/{id}` | manuelles Ergebnis setzen |
-| `DELETE` | `/api/games/{id}` | Spiel löschen |
-| `POST` | `/api/games/{id}/simulate` | einzelnes Spiel simulieren |
-| `POST` | `/api/schedule/generate` | Liga-Spielplan generieren |
-| `POST` | `/api/simulate` | alle offenen Spiele simulieren |
-| `GET` | `/api/standings` | aktuelle Tabelle |
-| `POST` | `/api/reset` | alle Spiele der Demo-Saison entfernen |
+| `GET` | `/api/health` | Backend- und Datenbankstatus |
+| `GET` | `/api/state` | vollständiges Coach-Charaktersheet |
+| `GET` | `/api/rules` | aktive technische Regelwerte |
+| `POST` | `/api/actions/sponsor` | Hymnen durch Sponsor gewinnen |
+| `POST` | `/api/actions/train` | Spielerwert im Trainingscamp erhöhen |
+| `POST` | `/api/actions/dope` | riskante Spieleraufwertung |
+| `POST` | `/api/actions/inspect` | FIFA-Kontrolle einer Gruppe |
+| `PATCH` | `/api/players/{id}/group` | Kartenverantwortung übertragen |
+| `POST` | `/api/match/substitute` | Aufstellung ändern / auswechseln |
+| `POST` | `/api/match/advance` | Spiel um 5, 10 oder 15 Minuten fortsetzen |
+| `POST` | `/api/reset` | Coach-Spielstand neu initialisieren |
 
 Beispiele:
 
 ```sh
-# Spielplan ab dem 1. August erzeugen
-curl -X POST http://localhost:8080/api/schedule/generate \
-  -H 'Content-Type: application/json' \
-  -d '{"startAt":"2026-08-01T15:00:00Z","intervalDays":7}'
+# Sponsor für Team Grün
+curl -X POST localhost:8080/api/actions/sponsor \
+  -H 'Content-Type: application/json' -d '{"teamId":1}'
 
-# Alle offenen Spiele reproduzierbar simulieren
-curl -X POST http://localhost:8080/api/simulate \
+# Angriff der Karte 4 im Trainingscamp erhöhen
+curl -X POST localhost:8080/api/actions/train \
   -H 'Content-Type: application/json' \
-  -d '{"seed":2026}'
+  -d '{"teamId":1,"playerId":4,"focus":"attack"}'
 
-# Manuelles Ergebnis erfassen (alte home/away-Felder bleiben kompatibel)
-curl -X POST http://localhost:8080/api/games \
-  -H 'Content-Type: application/json' \
-  -d '{"home":2,"away":6,"homeScore":3,"awayScore":1}'
+# Karte 4 dopen
+curl -X POST localhost:8080/api/actions/dope \
+  -H 'Content-Type: application/json' -d '{"teamId":1,"playerId":4}'
+
+# FIFA kontrolliert Gruppe 4 von Team Grün
+curl -X POST localhost:8080/api/actions/inspect \
+  -H 'Content-Type: application/json' -d '{"groupId":4}'
 ```
 
-## Datenmodell und Migration
+## Datenmodell
 
 ```mermaid
 erDiagram
-    SEASONS ||--o{ GAMES : enthaelt
-    TEAMS ||--o{ GAMES : heimteam
-    TEAMS ||--o{ GAMES : auswaertsteam
-    GAMES ||--o{ GAME_EVENTS : erzeugt
-    TEAMS ||--o{ GAME_EVENTS : verursacht
+    COACH_TEAMS ||--|{ COACH_GROUPS : besitzt
+    COACH_TEAMS ||--|{ PLAYER_CARDS : teilt
+    COACH_GROUPS ||--|{ PLAYER_CARDS : verwahrt
+    COACH_MATCHES ||--|{ COACH_LINEUPS : verwendet
+    PLAYER_CARDS ||--|{ COACH_LINEUPS : wird_eingesetzt
+    COACH_MATCHES ||--o{ COACH_EVENTS : protokolliert
 ```
 
-Bestehende Installationen müssen nichts manuell migrieren: Erkennt der Start
-das alte Schema mit `home`/`away`, wird die Tabelle innerhalb einer Transaktion
-umgebaut und alle vorhandenen Resultate bleiben erhalten.
+Die Tabellen der früheren Liga-Prototypen werden beim Start nicht zerstört.
+Das Coach-Spiel nutzt eigene, klar benannte Tabellen (`coach_*` und
+`player_cards`).
 
 ## Tests
 
 ```sh
-go test ./...
+go test -race ./...
 go vet ./...
 ```
 
-Die Tests decken Spielplan, Simulation und Seed-Reproduzierbarkeit, Tabelle,
-Validierung, Security-Header sowie die Migration einer alten Datenbank ab.
+Abgedeckt sind Initialisierung der 52 Karten, Gruppenverantwortung, Sponsor-
+und Hymnenlogik, Training, Doping und sichere FIFA-Entdeckung, automatische
+Ersatzspieler, Wechselzählung, kompletter Matchverlauf, API-Validierung und die
+nicht-destruktive Koexistenz mit älteren Datenbanktabellen.
 
-## Statischer Betrieb
-
-Wird nur `source/` ohne Go-Server ausgeliefert, wechselt das Frontend
-automatisch in einen lokalen Offline-Modus. Spielplan, Simulation und Tabelle
-funktionieren dann im Browser; die Daten werden in `localStorage` gespeichert.
+> Die Mechanik ist serverseitig autoritativ. Ein rein statisches Deployment
+> kann das Charaktersheet anzeigen, aber Aktionen und Persistenz benötigen das
+> Go-Backend.

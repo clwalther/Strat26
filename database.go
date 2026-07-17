@@ -4,217 +4,285 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"sort"
-	"strings"
 
 	_ "modernc.org/sqlite"
 )
 
-const coreSchema = `
-CREATE TABLE IF NOT EXISTS teams (
+const coachSchema = `
+CREATE TABLE IF NOT EXISTS coach_teams (
 	id INTEGER PRIMARY KEY,
 	name TEXT NOT NULL UNIQUE,
-	short_name TEXT NOT NULL UNIQUE,
-	color TEXT NOT NULL CHECK (color IN ('green', 'blue')),
-	rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 3000)
+	color TEXT NOT NULL UNIQUE CHECK (color IN ('green', 'blue')),
+	hymns INTEGER NOT NULL DEFAULT 8 CHECK (hymns >= 0),
+	sponsor_level INTEGER NOT NULL DEFAULT 1 CHECK (sponsor_level >= 1)
 );
 
-CREATE TABLE IF NOT EXISTS seasons (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT NOT NULL UNIQUE,
-	status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
-	created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);`
+CREATE TABLE IF NOT EXISTS coach_groups (
+	id INTEGER PRIMARY KEY,
+	team_id INTEGER NOT NULL REFERENCES coach_teams(id) ON DELETE CASCADE,
+	number INTEGER NOT NULL CHECK (number BETWEEN 1 AND 4),
+	name TEXT NOT NULL,
+	fifa_attention INTEGER NOT NULL DEFAULT 0 CHECK (fifa_attention BETWEEN 0 AND 100),
+	UNIQUE(team_id, number)
+);
 
-const gamesSchema = `
-CREATE TABLE IF NOT EXISTS games (
+CREATE TABLE IF NOT EXISTS player_cards (
+	id INTEGER PRIMARY KEY,
+	team_id INTEGER NOT NULL REFERENCES coach_teams(id) ON DELETE CASCADE,
+	number INTEGER NOT NULL CHECK (number BETWEEN 1 AND 26),
+	name TEXT NOT NULL,
+	position TEXT NOT NULL CHECK (position IN ('GK', 'DEF', 'MID', 'FWD')),
+	attack INTEGER NOT NULL CHECK (attack BETWEEN 0 AND 99),
+	defense INTEGER NOT NULL CHECK (defense BETWEEN 0 AND 99),
+	fitness INTEGER NOT NULL CHECK (fitness BETWEEN 0 AND 99),
+	morale INTEGER NOT NULL CHECK (morale BETWEEN 0 AND 99),
+	doping_level INTEGER NOT NULL DEFAULT 0 CHECK (doping_level BETWEEN 0 AND 100),
+	suspended INTEGER NOT NULL DEFAULT 0 CHECK (suspended IN (0, 1)),
+	custodian_group_id INTEGER NOT NULL REFERENCES coach_groups(id),
+	UNIQUE(team_id, number)
+);
+
+CREATE TABLE IF NOT EXISTS coach_matches (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	season_id INTEGER NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
-	round INTEGER NOT NULL DEFAULT 0 CHECK (round >= 0),
-	home_team_id INTEGER NOT NULL REFERENCES teams(id),
-	away_team_id INTEGER NOT NULL REFERENCES teams(id),
-	kickoff TEXT,
-	status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'played')),
-	home_score INTEGER,
-	away_score INTEGER,
-	simulation_seed INTEGER,
+	home_team_id INTEGER NOT NULL REFERENCES coach_teams(id),
+	away_team_id INTEGER NOT NULL REFERENCES coach_teams(id),
+	phase TEXT NOT NULL DEFAULT 'preparation' CHECK (phase IN ('preparation', 'first_half', 'halftime', 'second_half', 'finished')),
+	minute INTEGER NOT NULL DEFAULT 0 CHECK (minute BETWEEN 0 AND 90),
+	home_score INTEGER NOT NULL DEFAULT 0 CHECK (home_score >= 0),
+	away_score INTEGER NOT NULL DEFAULT 0 CHECK (away_score >= 0),
+	home_substitutions INTEGER NOT NULL DEFAULT 0,
+	away_substitutions INTEGER NOT NULL DEFAULT 0,
+	seed INTEGER NOT NULL DEFAULT 2026,
 	created_at TEXT NOT NULL DEFAULT (datetime('now')),
-	updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-	CHECK (home_team_id <> away_team_id),
-	CHECK (home_score IS NULL OR home_score >= 0),
-	CHECK (away_score IS NULL OR away_score >= 0),
-	CHECK ((status = 'scheduled' AND home_score IS NULL AND away_score IS NULL)
-		OR (status = 'played' AND home_score IS NOT NULL AND away_score IS NOT NULL))
+	CHECK (home_team_id <> away_team_id)
 );
 
-CREATE TABLE IF NOT EXISTS game_events (
+CREATE TABLE IF NOT EXISTS coach_lineups (
+	match_id INTEGER NOT NULL REFERENCES coach_matches(id) ON DELETE CASCADE,
+	player_id INTEGER NOT NULL REFERENCES player_cards(id) ON DELETE CASCADE,
+	team_id INTEGER NOT NULL REFERENCES coach_teams(id),
+	on_field INTEGER NOT NULL DEFAULT 0 CHECK (on_field IN (0, 1)),
+	slot TEXT NOT NULL DEFAULT 'BENCH',
+	entered_at INTEGER NOT NULL DEFAULT 0,
+	left_at INTEGER,
+	PRIMARY KEY(match_id, player_id)
+);
+
+CREATE TABLE IF NOT EXISTS coach_events (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-	minute INTEGER NOT NULL CHECK (minute BETWEEN 1 AND 120),
-	kind TEXT NOT NULL CHECK (kind IN ('goal', 'yellow_card')),
-	team_id INTEGER NOT NULL REFERENCES teams(id),
-	player TEXT NOT NULL,
-	detail TEXT NOT NULL DEFAULT ''
+	match_id INTEGER NOT NULL REFERENCES coach_matches(id) ON DELETE CASCADE,
+	minute INTEGER NOT NULL CHECK (minute BETWEEN 0 AND 90),
+	kind TEXT NOT NULL,
+	team_id INTEGER REFERENCES coach_teams(id),
+	player_id INTEGER REFERENCES player_cards(id),
+	text TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_games_season_round ON games(season_id, round, kickoff);
-CREATE INDEX IF NOT EXISTS idx_games_teams ON games(home_team_id, away_team_id);
-CREATE INDEX IF NOT EXISTS idx_events_game_minute ON game_events(game_id, minute);`
+CREATE INDEX IF NOT EXISTS idx_cards_team_group ON player_cards(team_id, custodian_group_id);
+CREATE INDEX IF NOT EXISTS idx_lineup_match_team ON coach_lineups(match_id, team_id, on_field);
+CREATE INDEX IF NOT EXISTS idx_coach_events_match ON coach_events(match_id, id);`
 
 func openDatabase(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
-
-	// SQLite serializes writes. A single connection keeps transactions and
-	// foreign-key settings predictable under concurrent HTTP requests.
 	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(`PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;`); err != nil {
 		db.Close()
 		return nil, err
 	}
-	if err := migrate(db); err != nil {
+	if _, err := db.Exec(coachSchema); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("create coach schema: %w", err)
+	}
+	if err := seedCoachData(db); err != nil {
 		db.Close()
 		return nil, err
 	}
 	return db, nil
 }
 
-func migrate(db *sql.DB) error {
+type databaseWriter interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
+func seedCoachData(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
-	if _, err := tx.Exec(coreSchema); err != nil {
-		return fmt.Errorf("create core schema: %w", err)
-	}
-	if err := seedCoreData(tx); err != nil {
+	if err := seedCoachDataTx(tx); err != nil {
 		return err
 	}
-
-	columns, err := tableColumns(tx, "games")
-	if err != nil {
-		return err
-	}
-	legacy := columns["home"] && !columns["home_team_id"]
-	if legacy {
-		if _, err := tx.Exec(`ALTER TABLE games RENAME TO games_legacy`); err != nil {
-			return fmt.Errorf("rename legacy games table: %w", err)
-		}
-	}
-	if _, err := tx.Exec(gamesSchema); err != nil {
-		return fmt.Errorf("create games schema: %w", err)
-	}
-
-	if legacy {
-		season, err := currentSeasonTx(tx)
-		if err != nil {
-			return err
-		}
-		_, err = tx.Exec(`
-			INSERT INTO games (
-				season_id, round, home_team_id, away_team_id, status,
-				home_score, away_score, created_at, updated_at
-			)
-			SELECT ?, 0, home, away,
-				CASE WHEN home_score IS NULL OR away_score IS NULL THEN 'scheduled' ELSE 'played' END,
-				home_score, away_score, COALESCE(created_at, datetime('now')),
-				COALESCE(created_at, datetime('now'))
-			FROM games_legacy`, season.ID)
-		if err != nil {
-			return fmt.Errorf("import legacy games: %w", err)
-		}
-		if _, err := tx.Exec(`DROP TABLE games_legacy`); err != nil {
-			return fmt.Errorf("drop legacy games table: %w", err)
-		}
-	}
-
 	return tx.Commit()
 }
 
-func tableColumns(tx *sql.Tx, table string) (map[string]bool, error) {
-	rows, err := tx.Query(`PRAGMA table_info(` + table + `)`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	columns := map[string]bool{}
-	for rows.Next() {
-		var cid, notNull, primaryKey int
-		var name, columnType string
-		var defaultValue any
-		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
-			return nil, err
-		}
-		columns[name] = true
-	}
-	return columns, rows.Err()
-}
-
-func seedCoreData(tx *sql.Tx) error {
-	teams := []Team{
-		{1, "Gruppe 1", "G1", "green", 1580},
-		{2, "Gruppe 2", "G2", "green", 1510},
-		{3, "Gruppe 3", "G3", "green", 1460},
-		{4, "Gruppe 4", "G4", "green", 1420},
-		{5, "Gruppe 5", "B5", "blue", 1560},
-		{6, "Gruppe 6", "B6", "blue", 1525},
-		{7, "Gruppe 7", "B7", "blue", 1485},
-		{8, "Gruppe 8", "B8", "blue", 1440},
-	}
-	for _, team := range teams {
-		if _, err := tx.Exec(`
-			INSERT INTO teams (id, name, short_name, color, rating)
-			VALUES (?, ?, ?, ?, ?)
-			ON CONFLICT(id) DO UPDATE SET
-				name = excluded.name, short_name = excluded.short_name,
-				color = excluded.color, rating = excluded.rating`,
-			team.ID, team.Name, team.ShortName, team.Color, team.Rating); err != nil {
-			return fmt.Errorf("seed teams: %w", err)
+func seedCoachDataTx(tx *sql.Tx) error {
+	for _, team := range []CoachTeam{
+		{ID: 1, Name: "Team Grün", Color: "green", Hymns: 8, SponsorLevel: 1},
+		{ID: 2, Name: "Team Blau", Color: "blue", Hymns: 8, SponsorLevel: 1},
+	} {
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO coach_teams (id, name, color, hymns, sponsor_level) VALUES (?, ?, ?, ?, ?)`,
+			team.ID, team.Name, team.Color, team.Hymns, team.SponsorLevel); err != nil {
+			return err
 		}
 	}
-	if _, err := tx.Exec(`
-		INSERT INTO seasons (name, status)
-		SELECT 'Saison 2026', 'active'
-		WHERE NOT EXISTS (SELECT 1 FROM seasons WHERE status = 'active')`); err != nil {
-		return fmt.Errorf("seed season: %w", err)
+	for teamID := int64(1); teamID <= 2; teamID++ {
+		for number := 1; number <= 4; number++ {
+			id := (teamID-1)*4 + int64(number)
+			if _, err := tx.Exec(`INSERT OR IGNORE INTO coach_groups (id, team_id, number, name) VALUES (?, ?, ?, ?)`,
+				id, teamID, number, fmt.Sprintf("Gruppe %d", number)); err != nil {
+				return err
+			}
+		}
+	}
+
+	var cardCount int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM player_cards`).Scan(&cardCount); err != nil {
+		return err
+	}
+	if cardCount == 0 {
+		for teamID := int64(1); teamID <= 2; teamID++ {
+			for number := 1; number <= 26; number++ {
+				id := (teamID-1)*26 + int64(number)
+				position := cardPosition(number)
+				attack, defense := initialCardValues(position, number, int(teamID))
+				fitness := 68 + (number*3+int(teamID)*5)%22
+				morale := 66 + (number*5+int(teamID)*3)%24
+				groupID := (teamID-1)*4 + int64((number-1)%4+1)
+				name := fmt.Sprintf("%s %02d", map[int64]string{1: "Grün", 2: "Blau"}[teamID], number)
+				if _, err := tx.Exec(`
+					INSERT INTO player_cards (
+						id, team_id, number, name, position, attack, defense, fitness, morale, custodian_group_id
+					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					id, teamID, number, name, position, attack, defense, fitness, morale, groupID); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	var matchID int64
+	err := tx.QueryRow(`SELECT id FROM coach_matches ORDER BY id DESC LIMIT 1`).Scan(&matchID)
+	if errors.Is(err, sql.ErrNoRows) {
+		result, insertErr := tx.Exec(`INSERT INTO coach_matches (home_team_id, away_team_id, seed) VALUES (1, 2, 2026)`)
+		if insertErr != nil {
+			return insertErr
+		}
+		matchID, err = result.LastInsertId()
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	var lineupCount int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM coach_lineups WHERE match_id = ?`, matchID).Scan(&lineupCount); err != nil {
+		return err
+	}
+	if lineupCount == 0 {
+		if err := seedLineups(tx, matchID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO coach_events (match_id, minute, kind, text) VALUES (?, 0, 'setup', 'Die Coach-Zentrale ist einsatzbereit.')`, matchID); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func currentSeasonTx(tx *sql.Tx) (Season, error) {
-	var season Season
-	err := tx.QueryRow(`
-		SELECT id, name, status, created_at
-		FROM seasons WHERE status = 'active' ORDER BY id DESC LIMIT 1`).Scan(
-		&season.ID, &season.Name, &season.Status, &season.CreatedAt)
-	return season, err
+func seedLineups(tx *sql.Tx, matchID int64) error {
+	starters := map[int]string{
+		1: "GK", 4: "DEF-1", 5: "DEF-2", 6: "DEF-3", 7: "DEF-4",
+		12: "MID-1", 13: "MID-2", 14: "MID-3", 15: "MID-4",
+		20: "FWD-1", 21: "FWD-2",
+	}
+	for teamID := int64(1); teamID <= 2; teamID++ {
+		for number := 1; number <= 26; number++ {
+			playerID := (teamID-1)*26 + int64(number)
+			slot, onField := starters[number]
+			if !onField {
+				slot = "BENCH"
+			}
+			if _, err := tx.Exec(`INSERT INTO coach_lineups (match_id, player_id, team_id, on_field, slot) VALUES (?, ?, ?, ?, ?)`,
+				matchID, playerID, teamID, onField, slot); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-func currentSeason(db *sql.DB) (Season, error) {
-	var season Season
-	err := db.QueryRow(`
-		SELECT id, name, status, created_at
-		FROM seasons WHERE status = 'active' ORDER BY id DESC LIMIT 1`).Scan(
-		&season.ID, &season.Name, &season.Status, &season.CreatedAt)
-	return season, err
+func cardPosition(number int) string {
+	switch {
+	case number <= 3:
+		return "GK"
+	case number <= 11:
+		return "DEF"
+	case number <= 19:
+		return "MID"
+	default:
+		return "FWD"
+	}
 }
 
-func listTeams(db *sql.DB) ([]Team, error) {
-	rows, err := db.Query(`SELECT id, name, short_name, color, rating FROM teams ORDER BY id`)
+func initialCardValues(position string, number, team int) (int, int) {
+	variation := (number*7 + team*5) % 14
+	switch position {
+	case "GK":
+		return 18 + variation/2, 70 + variation
+	case "DEF":
+		return 40 + variation, 65 + variation
+	case "MID":
+		return 56 + variation, 54 + variation
+	default:
+		return 68 + variation, 34 + variation
+	}
+}
+
+func loadCoachState(db *sql.DB) (CoachState, error) {
+	teams, err := listCoachTeams(db)
+	if err != nil {
+		return CoachState{}, err
+	}
+	groups, err := listSquadGroups(db)
+	if err != nil {
+		return CoachState{}, err
+	}
+	players, err := listPlayerCards(db)
+	if err != nil {
+		return CoachState{}, err
+	}
+	match, err := currentCoachMatch(db)
+	if err != nil {
+		return CoachState{}, err
+	}
+	lineup, err := listLineup(db, match.ID)
+	if err != nil {
+		return CoachState{}, err
+	}
+	events, err := listCoachEvents(db, match.ID)
+	if err != nil {
+		return CoachState{}, err
+	}
+	return CoachState{Rules: gameRules, Teams: teams, Groups: groups, Players: players, Match: match, Lineup: lineup, Events: events}, nil
+}
+
+func listCoachTeams(db *sql.DB) ([]CoachTeam, error) {
+	rows, err := db.Query(`SELECT id, name, color, hymns, sponsor_level FROM coach_teams ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	teams := []Team{}
+	teams := []CoachTeam{}
 	for rows.Next() {
-		var team Team
-		if err := rows.Scan(&team.ID, &team.Name, &team.ShortName, &team.Color, &team.Rating); err != nil {
+		var team CoachTeam
+		if err := rows.Scan(&team.ID, &team.Name, &team.Color, &team.Hymns, &team.SponsorLevel); err != nil {
 			return nil, err
 		}
 		teams = append(teams, team)
@@ -222,205 +290,147 @@ func listTeams(db *sql.DB) ([]Team, error) {
 	return teams, rows.Err()
 }
 
-type queryRower interface {
-	QueryRow(query string, args ...any) *sql.Row
-}
-
-func getGame(q queryRower, id int64) (Game, error) {
-	var game Game
-	var kickoff sql.NullString
-	var homeScore, awayScore sql.NullInt64
-	var simSeed sql.NullInt64
-	err := q.QueryRow(`
-		SELECT id, season_id, round, home_team_id, away_team_id, kickoff,
-			status, home_score, away_score, simulation_seed, created_at, updated_at
-		FROM games WHERE id = ?`, id).Scan(
-		&game.ID, &game.SeasonID, &game.Round, &game.HomeTeamID, &game.AwayTeamID,
-		&kickoff, &game.Status, &homeScore, &awayScore, &simSeed,
-		&game.CreatedAt, &game.UpdatedAt)
-	if err != nil {
-		return Game{}, err
-	}
-	if kickoff.Valid {
-		game.Kickoff = &kickoff.String
-	}
-	if homeScore.Valid {
-		score := int(homeScore.Int64)
-		game.HomeScore = &score
-	}
-	if awayScore.Valid {
-		score := int(awayScore.Int64)
-		game.AwayScore = &score
-	}
-	if simSeed.Valid {
-		seed := simSeed.Int64
-		game.SimSeed = &seed
-	}
-	return game, nil
-}
-
-func listGames(db *sql.DB) ([]Game, error) {
-	rows, err := db.Query(`SELECT id FROM games ORDER BY round, COALESCE(kickoff, ''), id`)
+func listSquadGroups(db *sql.DB) ([]SquadGroup, error) {
+	rows, err := db.Query(`SELECT id, team_id, number, name, fifa_attention FROM coach_groups ORDER BY team_id, number`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	var ids []int64
+	groups := []SquadGroup{}
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
+		var group SquadGroup
+		if err := rows.Scan(&group.ID, &group.TeamID, &group.Number, &group.Name, &group.FIFAAttention); err != nil {
 			return nil, err
 		}
-		ids = append(ids, id)
+		groups = append(groups, group)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-
-	games := make([]Game, 0, len(ids))
-	for _, id := range ids {
-		game, err := getGame(db, id)
-		if err != nil {
-			return nil, err
-		}
-		games = append(games, game)
-	}
-	return games, nil
+	return groups, rows.Err()
 }
 
-func listGameEvents(db *sql.DB, gameID int64) ([]GameEvent, error) {
+func listPlayerCards(db *sql.DB) ([]PlayerCard, error) {
 	rows, err := db.Query(`
-		SELECT id, game_id, minute, kind, team_id, player, detail
-		FROM game_events WHERE game_id = ? ORDER BY minute, id`, gameID)
+		SELECT id, team_id, number, name, position, attack, defense, fitness, morale,
+			doping_level, suspended, custodian_group_id
+		FROM player_cards ORDER BY team_id, number`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	events := []GameEvent{}
+	players := []PlayerCard{}
 	for rows.Next() {
-		var event GameEvent
-		if err := rows.Scan(&event.ID, &event.GameID, &event.Minute, &event.Kind,
-			&event.TeamID, &event.Player, &event.Detail); err != nil {
+		var player PlayerCard
+		if err := rows.Scan(&player.ID, &player.TeamID, &player.Number, &player.Name, &player.Position,
+			&player.Attack, &player.Defense, &player.Fitness, &player.Morale,
+			&player.DopingLevel, &player.Suspended, &player.CustodianGroupID); err != nil {
 			return nil, err
+		}
+		players = append(players, player)
+	}
+	return players, rows.Err()
+}
+
+func currentCoachMatch(q databaseWriter) (CoachMatch, error) {
+	var match CoachMatch
+	err := q.QueryRow(`
+		SELECT id, home_team_id, away_team_id, phase, minute, home_score, away_score,
+			home_substitutions, away_substitutions, seed
+		FROM coach_matches ORDER BY id DESC LIMIT 1`).Scan(
+		&match.ID, &match.HomeTeamID, &match.AwayTeamID, &match.Phase, &match.Minute,
+		&match.HomeScore, &match.AwayScore, &match.HomeSubstitutions, &match.AwaySubstitutions, &match.Seed)
+	return match, err
+}
+
+func getPlayerCard(q databaseWriter, id int64) (PlayerCard, error) {
+	var player PlayerCard
+	err := q.QueryRow(`
+		SELECT id, team_id, number, name, position, attack, defense, fitness, morale,
+			doping_level, suspended, custodian_group_id
+		FROM player_cards WHERE id = ?`, id).Scan(
+		&player.ID, &player.TeamID, &player.Number, &player.Name, &player.Position,
+		&player.Attack, &player.Defense, &player.Fitness, &player.Morale,
+		&player.DopingLevel, &player.Suspended, &player.CustodianGroupID)
+	return player, err
+}
+
+func getSquadGroup(q databaseWriter, id int64) (SquadGroup, error) {
+	var group SquadGroup
+	err := q.QueryRow(`SELECT id, team_id, number, name, fifa_attention FROM coach_groups WHERE id = ?`, id).Scan(
+		&group.ID, &group.TeamID, &group.Number, &group.Name, &group.FIFAAttention)
+	return group, err
+}
+
+func listLineup(db *sql.DB, matchID int64) ([]LineupEntry, error) {
+	rows, err := db.Query(`
+		SELECT l.player_id, l.team_id, l.on_field, l.slot, l.entered_at, l.left_at,
+			p.number, p.name, p.position
+		FROM coach_lineups l JOIN player_cards p ON p.id = l.player_id
+		WHERE l.match_id = ? ORDER BY l.team_id, l.on_field DESC, p.position, p.number`, matchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	entries := []LineupEntry{}
+	for rows.Next() {
+		var entry LineupEntry
+		var leftAt sql.NullInt64
+		if err := rows.Scan(&entry.PlayerID, &entry.TeamID, &entry.OnField, &entry.Slot,
+			&entry.EnteredAt, &leftAt, &entry.PlayerNumber, &entry.PlayerName, &entry.Position); err != nil {
+			return nil, err
+		}
+		if leftAt.Valid {
+			value := int(leftAt.Int64)
+			entry.LeftAt = &value
+		}
+		entries = append(entries, entry)
+	}
+	return entries, rows.Err()
+}
+
+func listCoachEvents(db *sql.DB, matchID int64) ([]CoachEvent, error) {
+	rows, err := db.Query(`SELECT id, match_id, minute, kind, team_id, player_id, text FROM coach_events WHERE match_id = ? ORDER BY id DESC LIMIT 100`, matchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	events := []CoachEvent{}
+	for rows.Next() {
+		var event CoachEvent
+		var teamID, playerID sql.NullInt64
+		if err := rows.Scan(&event.ID, &event.MatchID, &event.Minute, &event.Kind, &teamID, &playerID, &event.Text); err != nil {
+			return nil, err
+		}
+		if teamID.Valid {
+			value := teamID.Int64
+			event.TeamID = &value
+		}
+		if playerID.Valid {
+			value := playerID.Int64
+			event.PlayerID = &value
 		}
 		events = append(events, event)
 	}
 	return events, rows.Err()
 }
 
-func calculateStandings(db *sql.DB) ([]Standing, error) {
-	teams, err := listTeams(db)
-	if err != nil {
-		return nil, err
-	}
-	games, err := listGames(db)
-	if err != nil {
-		return nil, err
-	}
-
-	byTeam := make(map[int64]*Standing, len(teams))
-	for _, team := range teams {
-		standing := &Standing{
-			TeamID: team.ID, TeamName: team.Name, ShortName: team.ShortName, Color: team.Color,
-		}
-		byTeam[team.ID] = standing
-	}
-
-	for _, game := range games {
-		if game.Status != "played" || game.HomeScore == nil || game.AwayScore == nil {
-			continue
-		}
-		home, homeOK := byTeam[game.HomeTeamID]
-		away, awayOK := byTeam[game.AwayTeamID]
-		if !homeOK || !awayOK {
-			continue
-		}
-		home.Played++
-		away.Played++
-		home.GoalsFor += *game.HomeScore
-		home.GoalsAgainst += *game.AwayScore
-		away.GoalsFor += *game.AwayScore
-		away.GoalsAgainst += *game.HomeScore
-		switch {
-		case *game.HomeScore > *game.AwayScore:
-			home.Won++
-			home.Points += 3
-			away.Lost++
-		case *game.HomeScore < *game.AwayScore:
-			away.Won++
-			away.Points += 3
-			home.Lost++
-		default:
-			home.Drawn++
-			away.Drawn++
-			home.Points++
-			away.Points++
-		}
-	}
-
-	standings := make([]Standing, 0, len(byTeam))
-	for _, standing := range byTeam {
-		standing.GoalDifference = standing.GoalsFor - standing.GoalsAgainst
-		standings = append(standings, *standing)
-	}
-	sort.SliceStable(standings, func(i, j int) bool {
-		if standings[i].Points != standings[j].Points {
-			return standings[i].Points > standings[j].Points
-		}
-		if standings[i].GoalDifference != standings[j].GoalDifference {
-			return standings[i].GoalDifference > standings[j].GoalDifference
-		}
-		if standings[i].GoalsFor != standings[j].GoalsFor {
-			return standings[i].GoalsFor > standings[j].GoalsFor
-		}
-		return standings[i].TeamID < standings[j].TeamID
-	})
-	for index := range standings {
-		standings[index].Rank = index + 1
-	}
-	return standings, nil
+func appendCoachEvent(tx *sql.Tx, match CoachMatch, kind string, teamID, playerID *int64, text string) error {
+	_, err := tx.Exec(`INSERT INTO coach_events (match_id, minute, kind, team_id, player_id, text) VALUES (?, ?, ?, ?, ?, ?)`,
+		match.ID, match.Minute, kind, teamID, playerID, text)
+	return err
 }
 
-func validateGameTeams(db *sql.DB, homeID, awayID int64) error {
-	if homeID == awayID {
-		return errors.New("home and away team must differ")
-	}
-	var count int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM teams WHERE id IN (?, ?)`, homeID, awayID).Scan(&count); err != nil {
+func resetCoachGame(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
 		return err
 	}
-	if count != 2 {
-		return errors.New("unknown team")
-	}
-	return nil
-}
-
-func filterGames(games []Game, status string, teamID int64) []Game {
-	if status == "" && teamID == 0 {
-		return games
-	}
-	filtered := make([]Game, 0, len(games))
-	for _, game := range games {
-		if status != "" && game.Status != status {
-			continue
+	defer tx.Rollback()
+	for _, table := range []string{"coach_events", "coach_lineups", "coach_matches", "player_cards", "coach_groups", "coach_teams"} {
+		if _, err := tx.Exec(`DELETE FROM ` + table); err != nil {
+			return err
 		}
-		if teamID != 0 && game.HomeTeamID != teamID && game.AwayTeamID != teamID {
-			continue
-		}
-		filtered = append(filtered, game)
 	}
-	return filtered
-}
-
-func normalizeStatus(value string) (string, error) {
-	value = strings.TrimSpace(strings.ToLower(value))
-	if value == "" || value == "scheduled" || value == "played" {
-		return value, nil
+	if err := seedCoachDataTx(tx); err != nil {
+		return err
 	}
-	return "", errors.New("status must be scheduled or played")
+	return tx.Commit()
 }

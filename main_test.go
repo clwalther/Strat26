@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
-	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -42,176 +40,233 @@ func decodeResponse[T any](t *testing.T, response *httptest.ResponseRecorder) T 
 	return value
 }
 
-func TestGenerateAndSimulateSeason(t *testing.T) {
-	_, server := testApplication(t)
-
-	response := performRequest(t, server, http.MethodPost, "/api/schedule/generate",
-		`{"startAt":"2026-08-01T15:00:00Z","intervalDays":7}`)
-	if response.Code != http.StatusCreated {
-		t.Fatalf("generate schedule returned %d: %s", response.Code, response.Body.String())
-	}
-	generated := decodeResponse[APIState](t, response)
-	if len(generated.Games) != 16 {
-		t.Fatalf("expected 16 games, got %d", len(generated.Games))
-	}
-	rounds := map[int]int{}
-	pairs := map[[2]int64]bool{}
-	for _, game := range generated.Games {
-		rounds[game.Round]++
-		pair := [2]int64{game.HomeTeamID, game.AwayTeamID}
-		if pairs[pair] {
-			t.Fatalf("duplicate pairing: %v", pair)
-		}
-		pairs[pair] = true
-	}
-	for round := 1; round <= 4; round++ {
-		if rounds[round] != 4 {
-			t.Fatalf("round %d contains %d games", round, rounds[round])
-		}
-	}
-
-	response = performRequest(t, server, http.MethodPost, "/api/simulate", `{"seed":2026}`)
+func getState(t *testing.T, server http.Handler) CoachState {
+	t.Helper()
+	response := performRequest(t, server, http.MethodGet, "/api/state", "")
 	if response.Code != http.StatusOK {
-		t.Fatalf("simulate season returned %d: %s", response.Code, response.Body.String())
+		t.Fatalf("state returned %d: %s", response.Code, response.Body.String())
 	}
-	simulated := decodeResponse[APIState](t, response)
-	for _, game := range simulated.Games {
-		if game.Status != "played" || game.HomeScore == nil || game.AwayScore == nil {
-			t.Fatalf("game %d was not simulated: %+v", game.ID, game)
-		}
-	}
-	if len(simulated.Standing) != 8 {
-		t.Fatalf("expected 8 standings rows, got %d", len(simulated.Standing))
-	}
-	for _, row := range simulated.Standing {
-		if row.Played != 4 {
-			t.Fatalf("team %d played %d games, expected 4", row.TeamID, row.Played)
-		}
-		if row.GoalDifference != row.GoalsFor-row.GoalsAgainst {
-			t.Fatalf("invalid goal difference for team %d", row.TeamID)
-		}
-	}
+	return decodeResponse[CoachState](t, response)
 }
 
-func TestSimulationIsReproducible(t *testing.T) {
+func TestInitialCoachState(t *testing.T) {
 	_, server := testApplication(t)
-	created := performRequest(t, server, http.MethodPost, "/api/games",
-		`{"homeTeamId":1,"awayTeamId":5,"round":1}`)
-	if created.Code != http.StatusCreated {
-		t.Fatalf("create game returned %d: %s", created.Code, created.Body.String())
+	state := getState(t, server)
+	if len(state.Teams) != 2 {
+		t.Fatalf("expected 2 teams, got %d", len(state.Teams))
 	}
-	game := decodeResponse[Game](t, created)
-	path := "/api/games/" + integerString(game.ID) + "/simulate"
-
-	firstResponse := performRequest(t, server, http.MethodPost, path, `{"seed":42}`)
-	if firstResponse.Code != http.StatusOK {
-		t.Fatalf("first simulation returned %d: %s", firstResponse.Code, firstResponse.Body.String())
+	if len(state.Groups) != 8 {
+		t.Fatalf("expected 8 groups, got %d", len(state.Groups))
 	}
-	first := decodeResponse[GameDetails](t, firstResponse)
-	secondResponse := performRequest(t, server, http.MethodPost, path, `{"seed":42}`)
-	second := decodeResponse[GameDetails](t, secondResponse)
-	if *first.Game.HomeScore != *second.Game.HomeScore || *first.Game.AwayScore != *second.Game.AwayScore {
-		t.Fatalf("same seed produced different scores: %d:%d vs %d:%d",
-			*first.Game.HomeScore, *first.Game.AwayScore,
-			*second.Game.HomeScore, *second.Game.AwayScore)
+	if len(state.Players) != 52 {
+		t.Fatalf("expected 52 player cards, got %d", len(state.Players))
 	}
-	type comparableEvent struct {
-		Minute int
-		Kind   string
-		TeamID int64
-		Player string
+	teamCards := map[int64]int{}
+	for _, player := range state.Players {
+		teamCards[player.TeamID]++
 	}
-	compact := func(events []GameEvent) []comparableEvent {
-		result := make([]comparableEvent, len(events))
-		for index, event := range events {
-			result[index] = comparableEvent{event.Minute, event.Kind, event.TeamID, event.Player}
+	if teamCards[1] != 26 || teamCards[2] != 26 {
+		t.Fatalf("each team must own 26 cards: %+v", teamCards)
+	}
+	onField := map[int64]int{}
+	for _, entry := range state.Lineup {
+		if entry.OnField {
+			onField[entry.TeamID]++
 		}
-		return result
 	}
-	if !reflect.DeepEqual(compact(first.Events), compact(second.Events)) {
-		t.Fatal("same seed produced a different event timeline")
+	if onField[1] != 11 || onField[2] != 11 {
+		t.Fatalf("each team must start with 11 players: %+v", onField)
+	}
+	if state.Match.HomeTeamID != 1 || state.Match.AwayTeamID != 2 {
+		t.Fatalf("wrong match pairing: %+v", state.Match)
 	}
 }
 
-func TestManualResultsAndValidation(t *testing.T) {
+func TestSponsorTrainingAndDoping(t *testing.T) {
 	_, server := testApplication(t)
-	tests := []string{
-		`{"homeTeamId":1,"awayTeamId":1}`,
-		`{"homeTeamId":1,"awayTeamId":99}`,
-		`{"homeTeamId":1,"awayTeamId":5,"homeScore":2}`,
-		`{"homeTeamId":1,"awayTeamId":5,"homeScore":-1,"awayScore":0}`,
-		`{"homeTeamId":1,"awayTeamId":5,"unexpected":true}`,
+	initial := getState(t, server)
+	player := initial.Players[3]
+	initialAttack := player.Attack
+	initialFitness := player.Fitness
+
+	response := performRequest(t, server, http.MethodPost, "/api/actions/sponsor", `{"teamId":1}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("sponsor returned %d: %s", response.Code, response.Body.String())
 	}
-	for _, body := range tests {
-		response := performRequest(t, server, http.MethodPost, "/api/games", body)
-		if response.Code != http.StatusBadRequest {
-			t.Errorf("invalid request %s returned %d", body, response.Code)
-		}
+	afterSponsor := decodeResponse[CoachState](t, response)
+	if afterSponsor.Teams[0].Hymns != 8+gameRules.SponsorReward {
+		t.Fatalf("sponsor reward missing: %+v", afterSponsor.Teams[0])
 	}
 
-	response := performRequest(t, server, http.MethodPost, "/api/games",
-		`{"home":1,"away":5,"homeScore":3,"awayScore":1}`)
-	if response.Code != http.StatusCreated {
-		t.Fatalf("legacy-compatible create returned %d: %s", response.Code, response.Body.String())
+	response = performRequest(t, server, http.MethodPost, "/api/actions/train",
+		`{"teamId":1,"playerId":4,"focus":"attack"}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("training returned %d: %s", response.Code, response.Body.String())
 	}
-	standingResponse := performRequest(t, server, http.MethodGet, "/api/standings", "")
-	standing := decodeResponse[[]Standing](t, standingResponse)
-	if standing[0].TeamID != 1 || standing[0].Points != 3 {
-		t.Fatalf("manual result was not reflected in standings: %+v", standing[0])
+	afterTraining := decodeResponse[CoachState](t, response)
+	trained := findPlayer(afterTraining.Players, 4)
+	if trained.Attack != minInt(99, initialAttack+gameRules.TrainingGain) {
+		t.Fatalf("training gain missing: %d -> %d", initialAttack, trained.Attack)
+	}
+
+	response = performRequest(t, server, http.MethodPost, "/api/actions/dope", `{"teamId":1,"playerId":4}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("doping returned %d: %s", response.Code, response.Body.String())
+	}
+	afterDoping := decodeResponse[CoachState](t, response)
+	doped := findPlayer(afterDoping.Players, 4)
+	if doped.Attack != minInt(99, trained.Attack+gameRules.DopingGain) || doped.Fitness != minInt(99, initialFitness+gameRules.DopingGain) {
+		t.Fatalf("doping gain missing: %+v", doped)
+	}
+	if doped.DopingLevel != gameRules.DopingRisk {
+		t.Fatalf("doping risk missing: %+v", doped)
+	}
+	group := findGroup(afterDoping.Groups, doped.CustodianGroupID)
+	if group.FIFAAttention == 0 {
+		t.Fatal("doping must increase FIFA attention for the responsible group")
 	}
 }
 
-func TestLegacyDatabaseMigration(t *testing.T) {
+func TestFIFAInspectionCanSuspendCards(t *testing.T) {
+	db, server := testApplication(t)
+	if _, err := db.Exec(`UPDATE player_cards SET doping_level = 100 WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE coach_groups SET fifa_attention = 100 WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	response := performRequest(t, server, http.MethodPost, "/api/actions/inspect", `{"groupId":1,"seed":1}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("inspection returned %d: %s", response.Code, response.Body.String())
+	}
+	state := decodeResponse[CoachState](t, response)
+	player := findPlayer(state.Players, 1)
+	if !player.Suspended || player.DopingLevel != 0 {
+		t.Fatalf("detected card was not suspended: %+v", player)
+	}
+	if findGroup(state.Groups, 1).FIFAAttention != 0 {
+		t.Fatal("inspection must resolve the current attention value")
+	}
+	onField := 0
+	for _, entry := range state.Lineup {
+		if entry.TeamID == 1 && entry.OnField {
+			onField++
+		}
+	}
+	if onField != 11 {
+		t.Fatalf("a suspended starter must be replaced automatically, got %d field players", onField)
+	}
+}
+
+func TestLineupAndSubstitutionLimit(t *testing.T) {
+	_, server := testApplication(t)
+	response := performRequest(t, server, http.MethodPost, "/api/match/substitute",
+		`{"teamId":1,"outPlayerId":4,"inPlayerId":8}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("pre-match lineup change returned %d: %s", response.Code, response.Body.String())
+	}
+	state := decodeResponse[CoachState](t, response)
+	if state.Match.HomeSubstitutions != 0 {
+		t.Fatal("pre-match lineup changes must not consume a substitution")
+	}
+	if lineupEntry(state.Lineup, 4).OnField || !lineupEntry(state.Lineup, 8).OnField {
+		t.Fatal("lineup was not swapped")
+	}
+
+	advance := performRequest(t, server, http.MethodPost, "/api/match/advance", `{"minutes":5,"seed":9}`)
+	if advance.Code != http.StatusOK {
+		t.Fatalf("advance returned %d: %s", advance.Code, advance.Body.String())
+	}
+	response = performRequest(t, server, http.MethodPost, "/api/match/substitute",
+		`{"teamId":1,"outPlayerId":5,"inPlayerId":9}`)
+	state = decodeResponse[CoachState](t, response)
+	if state.Match.HomeSubstitutions != 1 {
+		t.Fatalf("in-match substitution was not counted: %+v", state.Match)
+	}
+}
+
+func TestMatchCanRunToFullTime(t *testing.T) {
+	_, server := testApplication(t)
+	for step := 0; step < 18; step++ {
+		response := performRequest(t, server, http.MethodPost, "/api/match/advance", `{"minutes":5,"seed":2026}`)
+		if response.Code != http.StatusOK {
+			t.Fatalf("step %d returned %d: %s", step, response.Code, response.Body.String())
+		}
+	}
+	state := getState(t, server)
+	if state.Match.Minute != 90 || state.Match.Phase != "finished" {
+		t.Fatalf("match did not finish: %+v", state.Match)
+	}
+	if len(state.Events) < 4 {
+		t.Fatalf("expected match timeline, got %d events", len(state.Events))
+	}
+}
+
+func TestCardResponsibilityCanMoveWithinTeam(t *testing.T) {
+	_, server := testApplication(t)
+	response := performRequest(t, server, http.MethodPatch, "/api/players/1/group", `{"groupId":2}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("assign group returned %d: %s", response.Code, response.Body.String())
+	}
+	state := decodeResponse[CoachState](t, response)
+	if findPlayer(state.Players, 1).CustodianGroupID != 2 {
+		t.Fatal("card responsibility was not moved")
+	}
+	response = performRequest(t, server, http.MethodPatch, "/api/players/1/group", `{"groupId":5}`)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("cross-team assignment returned %d", response.Code)
+	}
+}
+
+func TestHealthAndLegacyTablesCoexist(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "legacy.db")
 	legacy, err := sql.Open("sqlite", path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = legacy.Exec(`
-		CREATE TABLE games (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			home INTEGER NOT NULL,
-			away INTEGER NOT NULL,
-			home_score INTEGER,
-			away_score INTEGER,
-			created_at TEXT NOT NULL DEFAULT (datetime('now'))
-		);
-		INSERT INTO games (home, away, home_score, away_score) VALUES (2, 6, 4, 2);`)
-	if err != nil {
+	if _, err := legacy.Exec(`CREATE TABLE games (id INTEGER PRIMARY KEY, home INTEGER, away INTEGER); INSERT INTO games VALUES (1, 1, 5)`); err != nil {
 		t.Fatal(err)
 	}
-	if err := legacy.Close(); err != nil {
-		t.Fatal(err)
-	}
-
+	legacy.Close()
 	db, err := openDatabase(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	games, err := listGames(db)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(games) != 1 || games[0].HomeTeamID != 2 || games[0].AwayTeamID != 6 {
-		t.Fatalf("legacy game was not migrated: %+v", games)
-	}
-	if games[0].Status != "played" || *games[0].HomeScore != 4 || *games[0].AwayScore != 2 {
-		t.Fatalf("legacy result was not preserved: %+v", games[0])
-	}
-}
-
-func TestHealthAndSecurityHeaders(t *testing.T) {
-	_, server := testApplication(t)
+	server := newServer(db)
 	response := performRequest(t, server, http.MethodGet, "/api/health", "")
-	if response.Code != http.StatusOK {
-		t.Fatalf("health returned %d", response.Code)
+	if response.Code != http.StatusOK || response.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatalf("health/security check failed: %d", response.Code)
 	}
-	if response.Header().Get("X-Content-Type-Options") != "nosniff" {
-		t.Fatal("security headers are missing")
+	var legacyCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM games`).Scan(&legacyCount); err != nil || legacyCount != 1 {
+		t.Fatal("coach schema must not destroy existing tables")
 	}
 }
 
-func integerString(value int64) string {
-	return strconv.FormatInt(value, 10)
+func findPlayer(players []PlayerCard, id int64) PlayerCard {
+	for _, player := range players {
+		if player.ID == id {
+			return player
+		}
+	}
+	return PlayerCard{}
+}
+
+func findGroup(groups []SquadGroup, id int64) SquadGroup {
+	for _, group := range groups {
+		if group.ID == id {
+			return group
+		}
+	}
+	return SquadGroup{}
+}
+
+func lineupEntry(entries []LineupEntry, playerID int64) LineupEntry {
+	for _, entry := range entries {
+		if entry.PlayerID == playerID {
+			return entry
+		}
+	}
+	return LineupEntry{}
 }

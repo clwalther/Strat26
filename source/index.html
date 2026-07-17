@@ -3,145 +3,85 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="color-scheme" content="light dark">
-	<meta name="theme-color" content="#101816">
-	<title>Strat26 · Turnierzentrum</title>
+	<meta name="color-scheme" content="dark light">
+	<meta name="theme-color" content="#0d1512">
+	<title>Strategiespiel 2026 · Zentrale – Coach</title>
 	<link rel="icon" href="/images/favicon.png" type="image/png">
 	<link rel="stylesheet" href="/css/app.css">
 	<script src="/javascript/script.js" defer></script>
 </head>
 <body>
-	<div class="app-shell">
-		<aside class="sidebar" aria-label="Hauptnavigation">
-			<a class="brand" href="#dashboard" aria-label="Strat26 Startseite">
-				<span class="brand-mark">S26</span>
-				<span><strong>Strat26</strong><small>Turnierzentrum</small></span>
-			</a>
-
-			<nav class="nav-list">
-				<button class="nav-item active" type="button" data-view="dashboard">
-					<span class="nav-icon">⌂</span><span>Übersicht</span>
-				</button>
-				<button class="nav-item" type="button" data-view="games">
-					<span class="nav-icon">◫</span><span>Spiele</span>
-				</button>
-				<button class="nav-item" type="button" data-view="standings">
-					<span class="nav-icon">≡</span><span>Tabelle</span>
-				</button>
-				<button class="nav-item" type="button" data-view="teams">
-					<span class="nav-icon">●</span><span>Teams</span>
-				</button>
-			</nav>
-
-			<div class="sidebar-card">
-				<span class="live-dot"></span>
-				<div><strong id="connection-label">Verbinde …</strong><small id="connection-detail">API wird geprüft</small></div>
+	<div class="shell">
+		<aside class="sidebar">
+			<a class="brand" href="#zentrale"><span class="brand-mark">26</span><span><strong>Strategiespiel</strong><small>Zentrale · Coach</small></span></a>
+			<div class="team-switch" aria-label="Mannschaft wählen">
+				<button class="team-choice green active" type="button" data-team="1"><i></i> Grün</button>
+				<button class="team-choice blue" type="button" data-team="2"><i></i> Blau</button>
 			</div>
-			<p class="sidebar-foot">Saisonmanagement · Simulation · Statistik</p>
+			<nav>
+				<button class="nav-item active" type="button" data-view="zentrale"><span>⌂</span>Zentrale</button>
+				<button class="nav-item" type="button" data-view="kader"><span>▦</span>Spielerkarten</button>
+				<button class="nav-item" type="button" data-view="aufstellung"><span>◉</span>Aufstellung</button>
+				<button class="nav-item" type="button" data-view="aktionen"><span>⚡</span>Aktionen</button>
+				<button class="nav-item" type="button" data-view="spiel"><span>▶</span>Spielverlauf</button>
+			</nav>
+			<div class="station-status"><span class="status-light"></span><div><strong id="server-status">Verbinde …</strong><small>Station Zentrale</small></div></div>
+			<p class="sidebar-note">Der Coach koordiniert die vier Gruppen und den gemeinsamen Kader.</p>
 		</aside>
 
-		<main class="main-content">
+		<main>
 			<header class="topbar">
-				<button class="mobile-menu" id="mobile-menu" type="button" aria-label="Navigation öffnen">☰</button>
-				<div>
-					<p class="eyebrow">Wettbewerb</p>
-					<h1 id="page-title">Übersicht</h1>
-				</div>
-				<div class="topbar-actions">
-					<span class="season-pill" id="season-name">Saison 2026</span>
-					<button class="icon-button" id="theme-toggle" type="button" aria-label="Farbschema wechseln">◐</button>
-					<button class="button primary" id="open-create" type="button">+ Spiel</button>
-				</div>
+				<button class="menu-button" id="menu-button" type="button" aria-label="Menü öffnen">☰</button>
+				<div><p class="eyebrow">Strategiespiel 2026 · Charaktersheet</p><h1 id="page-title">Zentrale</h1></div>
+				<div class="resource"><span>♫</span><div><small>Hymnen</small><strong id="hymn-count">–</strong></div></div>
+				<button class="theme-button" id="theme-button" type="button" aria-label="Farbschema wechseln">◐</button>
 			</header>
 
-			<div class="offline-banner hidden" id="offline-banner" role="status">
-				<strong>Offline-Modus.</strong> Änderungen werden in diesem Browser gespeichert und nicht mit dem Server synchronisiert.
-			</div>
+			<div class="connection-error hidden" id="connection-error" role="alert"><strong>Backend nicht erreichbar.</strong> Die Coach-Mechanik benötigt den Go-Server und die SQLite-Datenbank.</div>
 
-			<section class="view active" id="view-dashboard" aria-labelledby="page-title">
+			<section class="view active" id="view-zentrale">
 				<div class="hero panel">
-					<div class="hero-copy">
-						<p class="eyebrow accent">STRAT26 LEAGUE CONTROL</p>
-						<h2>Eine Saison. Acht Teams.<br><span>Jede Entscheidung zählt.</span></h2>
-						<p>Erstelle den vollständigen Spielplan, simuliere Begegnungen nachvollziehbar und verfolge die Tabelle in Echtzeit.</p>
-						<div class="hero-actions">
-							<button class="button primary" id="generate-schedule" type="button">Spielplan erstellen</button>
-							<button class="button secondary" id="simulate-all" type="button">Alle offenen simulieren</button>
-						</div>
-					</div>
-					<div class="hero-visual" aria-hidden="true">
-						<div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
-						<div class="ball">26</div>
-						<span class="team-node green">G</span><span class="team-node blue">B</span>
-					</div>
+					<div class="hero-copy"><p class="eyebrow accent">STATION: ZENTRALE – COACH</p><h2>Vier Gruppen.<br>Ein gemeinsamer Kader.</h2><p>Verteile 26 Spielerkarten, stelle elf Spieler auf und entscheide zwischen sicherem Training und riskanter Aufwertung.</p><div class="hero-actions"><button class="button primary" type="button" data-go="aufstellung">Aufstellung führen</button><button class="button secondary" id="hero-advance" type="button">5 Minuten spielen</button></div></div>
+					<div class="hero-score"><span id="hero-phase">Vorbereitung</span><div><strong class="green-text" id="hero-home-score">0</strong><i>:</i><strong class="blue-text" id="hero-away-score">0</strong></div><small><b id="hero-minute">0</b>. Minute</small></div>
 				</div>
-
-				<div class="stats-grid" id="stats-grid"></div>
-
+				<div class="stats" id="stats"></div>
 				<div class="dashboard-grid">
-					<section class="panel section-panel">
-						<div class="section-heading"><div><p class="eyebrow">Spieltag</p><h3>Nächste Begegnungen</h3></div><button class="text-button" type="button" data-go="games">Alle Spiele →</button></div>
-						<div class="match-list compact" id="upcoming-list"></div>
-					</section>
-					<section class="panel section-panel">
-						<div class="section-heading"><div><p class="eyebrow">Live-Ranking</p><h3>Tabellenspitze</h3></div><button class="text-button" type="button" data-go="standings">Komplette Tabelle →</button></div>
-						<div class="mini-standing" id="mini-standing"></div>
-					</section>
+					<section class="panel section-card"><div class="section-head"><div><p class="eyebrow">Verantwortung</p><h3>Vier Gruppen</h3></div><button class="link-button" type="button" data-go="kader">Karten verwalten →</button></div><div class="group-overview" id="group-overview"></div></section>
+					<section class="panel section-card"><div class="section-head"><div><p class="eyebrow">Letzte Meldungen</p><h3>Coach-Funk</h3></div><button class="link-button" type="button" data-go="spiel">Alle Ereignisse →</button></div><div class="feed compact" id="recent-feed"></div></section>
 				</div>
 			</section>
 
-			<section class="view" id="view-games">
-				<div class="section-heading page-section-heading">
-					<div><p class="eyebrow">Begegnungen</p><h2>Spielplan & Ergebnisse</h2></div>
-					<div class="filter-row">
-						<select id="status-filter" aria-label="Status filtern"><option value="">Alle Status</option><option value="scheduled">Geplant</option><option value="played">Gespielt</option></select>
-						<select id="team-filter" aria-label="Team filtern"><option value="">Alle Teams</option></select>
-					</div>
-				</div>
-				<div class="match-list full" id="games-list"></div>
+			<section class="view" id="view-kader">
+				<div class="page-head"><div><p class="eyebrow">26 gemeinsame Karten</p><h2>Spielerkarten</h2><p>Jede Karte ist genau einer der vier Untergruppen zur Aufbewahrung zugewiesen.</p></div><div class="filters"><select id="group-filter" aria-label="Gruppe filtern"><option value="">Alle Gruppen</option></select><select id="position-filter" aria-label="Position filtern"><option value="">Alle Positionen</option><option>GK</option><option>DEF</option><option>MID</option><option>FWD</option></select><select id="card-status-filter" aria-label="Status filtern"><option value="">Alle Karten</option><option value="field">Auf dem Feld</option><option value="bench">Auf der Bank</option><option value="risk">FIFA-Risiko</option><option value="suspended">Gesperrt</option></select></div></div>
+				<div class="card-grid" id="player-grid"></div>
 			</section>
 
-			<section class="view" id="view-standings">
-				<div class="section-heading page-section-heading"><div><p class="eyebrow">Saisonwertung</p><h2>Tabelle</h2></div><span class="legend"><i class="green-dot"></i> Team Grün <i class="blue-dot"></i> Team Blau</span></div>
-				<div class="panel table-panel">
-					<div class="table-scroll">
-						<table><thead><tr><th>#</th><th>Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>Tore</th><th>Diff.</th><th>Pkt.</th></tr></thead><tbody id="standing-body"></tbody></table>
-					</div>
+			<section class="view" id="view-aufstellung">
+				<div class="page-head"><div><p class="eyebrow">Elf auf dem Feld</p><h2>Aufstellung & Wechsel</h2><p>Vor dem Anpfiff sind Änderungen frei. Im laufenden Spiel zählen maximal fünf Wechsel.</p></div><div class="subs-counter"><small>Wechsel</small><strong id="subs-count">0 / 5</strong></div></div>
+				<div class="lineup-layout">
+					<div class="pitch panel"><div class="pitch-line center-line"></div><div class="center-circle"></div><div class="penalty top"></div><div class="penalty bottom"></div><div class="formation" id="formation"></div></div>
+					<aside class="panel bench-panel"><div class="section-head"><div><p class="eyebrow">Kadersteuerung</p><h3>Auswechslung</h3></div></div><form id="substitution-form"><label>Spieler vom Feld<select id="out-player" required></select></label><span class="swap-arrow">↓</span><label>Spieler von der Bank<select id="in-player" required></select></label><button class="button primary wide" type="submit">Wechsel bestätigen</button></form><div class="bench-list" id="bench-list"></div></aside>
 				</div>
 			</section>
 
-			<section class="view" id="view-teams">
-				<div class="section-heading page-section-heading"><div><p class="eyebrow">Teilnehmer</p><h2>Teams & Stärke</h2></div><p class="muted">Ratings beeinflussen die erwartete Torverteilung der Simulation.</p></div>
-				<div class="team-grid" id="team-grid"></div>
+			<section class="view" id="view-aktionen">
+				<div class="page-head"><div><p class="eyebrow">Ressourcen & Risiko</p><h2>Coach-Aktionen</h2><p>Hymnen kommen von Sponsoren. Training ist sicher; Doping stärker, aber kontrollierbar.</p></div></div>
+				<div class="action-grid">
+					<article class="panel action-card sponsor-card"><span class="action-icon">♫</span><p class="eyebrow">Sponsor</p><h3>Hymnen beschaffen</h3><p>Gewinne einen Sponsor für die Mannschaft und fülle den Hymnen-Vorrat auf.</p><div class="rule-line"><span>Ertrag</span><strong id="sponsor-reward">+4 Hymnen</strong></div><button class="button primary wide" id="sponsor-action" type="button">Sponsor gewinnen</button></article>
+					<article class="panel action-card"><span class="action-icon">↗</span><p class="eyebrow">Trainingscamp</p><h3>Sicher aufwerten</h3><p>Verbessert gezielt einen Wert einer Spielerkarte, ohne FIFA-Risiko.</p><form id="training-form"><label>Spieler<select id="training-player" required></select></label><label>Schwerpunkt<select id="training-focus"><option value="attack">Angriff</option><option value="defense">Abwehr</option><option value="fitness">Fitness</option><option value="morale">Moral</option></select></label><div class="rule-line"><span>Kosten / Effekt</span><strong id="training-rule">2 ♫ · +2</strong></div><button class="button secondary wide" type="submit">Ins Trainingscamp</button></form></article>
+					<article class="panel action-card danger-card"><span class="action-icon">!</span><p class="eyebrow danger-text">Doping</p><h3>Riskant aufwerten</h3><p>Steigert Angriff und Fitness stärker. Die verantwortliche Gruppe gerät in den Fokus der FIFA.</p><form id="doping-form"><label>Spieler<select id="doping-player" required></select></label><div class="rule-line"><span>Kosten / Effekt</span><strong id="doping-rule">1 ♫ · +3 / Risiko +30</strong></div><button class="button danger wide" type="submit">Risiko eingehen</button></form></article>
+				</div>
+				<section class="panel fifa-panel"><div class="section-head"><div><p class="eyebrow">FIFA-Behörde</p><h3>Gruppenkontrollen</h3><p>Eine Kontrolle prüft alle Karten, für die eine Gruppe verantwortlich ist. Entdeckte Spieler werden gesperrt.</p></div><span class="fifa-seal">FIFA</span></div><div class="inspection-grid" id="inspection-grid"></div></section>
+			</section>
+
+			<section class="view" id="view-spiel">
+				<div class="match-board panel"><div class="match-team"><i class="team-crest green">G</i><strong>Team Grün</strong></div><div class="match-center"><span id="match-phase">Vorbereitung</span><div><b id="match-home-score">0</b><i>:</i><b id="match-away-score">0</b></div><small><strong id="match-minute">0</strong>. Minute</small><button class="button primary" id="advance-match" type="button">5 Minuten spielen</button></div><div class="match-team"><i class="team-crest blue">B</i><strong>Team Blau</strong></div></div>
+				<div class="panel timeline-panel"><div class="section-head"><div><p class="eyebrow">Chronik</p><h3>Spiel- & Aktionsverlauf</h3></div><button class="button ghost danger" id="reset-game" type="button">Spiel zurücksetzen</button></div><div class="feed" id="event-feed"></div></div>
 			</section>
 		</main>
 	</div>
 
-	<dialog id="create-dialog">
-		<form class="dialog-card" id="create-form">
-			<div class="dialog-heading"><div><p class="eyebrow">Neue Begegnung</p><h2>Spiel anlegen</h2></div><button class="dialog-close" type="button" data-close="create-dialog" aria-label="Schließen">×</button></div>
-			<div class="form-grid">
-				<label>Heimteam<select name="homeTeamId" id="home-team" required></select></label>
-				<label>Auswärtsteam<select name="awayTeamId" id="away-team" required></select></label>
-				<label>Spieltag<input name="round" type="number" min="0" value="0"></label>
-				<label>Anstoß<input name="kickoff" type="datetime-local"></label>
-				<label>Heimtore <small>(optional)</small><input name="homeScore" type="number" min="0" placeholder="–"></label>
-				<label>Auswärtstore <small>(optional)</small><input name="awayScore" type="number" min="0" placeholder="–"></label>
-			</div>
-			<p class="form-error hidden" id="create-error"></p>
-			<div class="dialog-actions"><button class="button secondary" type="button" data-close="create-dialog">Abbrechen</button><button class="button primary" type="submit">Spiel speichern</button></div>
-		</form>
-	</dialog>
-
-	<dialog id="game-dialog">
-		<div class="dialog-card game-dialog-card">
-			<div class="dialog-heading"><div><p class="eyebrow" id="game-dialog-meta">Begegnung</p><h2 id="game-dialog-title">Spieldetails</h2></div><button class="dialog-close" type="button" data-close="game-dialog" aria-label="Schließen">×</button></div>
-			<div class="scoreboard" id="game-scoreboard"></div>
-			<div class="timeline" id="game-timeline"></div>
-			<div class="dialog-actions split"><button class="button danger ghost" id="delete-game" type="button">Spiel löschen</button><button class="button primary" id="simulate-game" type="button">Spiel simulieren</button></div>
-		</div>
-	</dialog>
-
+	<dialog id="player-dialog"><div class="dialog-card"><div class="dialog-head"><div><p class="eyebrow" id="player-dialog-meta">Spielerkarte</p><h2 id="player-dialog-name">Spieler</h2></div><button class="close-button" type="button" data-close="player-dialog">×</button></div><div class="player-detail" id="player-detail"></div><label class="group-assignment">Verantwortliche Gruppe<select id="player-group-select"></select></label><div class="dialog-actions"><button class="button secondary" type="button" data-close="player-dialog">Schließen</button><button class="button primary" id="save-player-group" type="button">Zuordnung speichern</button></div></div></dialog>
 	<div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
