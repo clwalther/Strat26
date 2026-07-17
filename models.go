@@ -31,13 +31,13 @@ type Game struct {
 }
 
 type GameEvent struct {
-	ID       int64  `json:"id"`
-	GameID   int64  `json:"gameId"`
-	Minute   int    `json:"minute"`
-	Kind     string `json:"kind"`
-	TeamID   int64  `json:"teamId"`
-	Player   string `json:"player"`
-	Detail   string `json:"detail"`
+	ID     int64  `json:"id"`
+	GameID int64  `json:"gameId"`
+	Minute int    `json:"minute"`
+	Kind   string `json:"kind"`
+	TeamID int64  `json:"teamId"`
+	Player string `json:"player"`
+	Detail string `json:"detail"`
 }
 
 type GameDetails struct {
