@@ -91,10 +91,17 @@ function toggleTheme() {
 	// same path as the dialog close icons
 	const CLOSE_PATH = "M480-442.85 309.08-271.92q-8.31 8.3-17.89 8-9.57-.31-18.27-9-8.69-8.7-8.69-18.58 0-9.88 8.69-18.58L442.85-480 271.92-650.92q-8.3-8.31-8-18.39.31-10.07 9-18.77 8.7-8.69 18.58-8.69 9.88 0 18.58 8.69L480-517.15l170.92-170.93q8.31-8.3 18.39-8.5 10.07-.19 18.77 8.5 8.69 8.7 8.69 18.58 0 9.88-8.69 18.58L517.15-480l170.93 170.92q8.3 8.31 8.5 17.89.19 9.57-8.5 18.27-8.7 8.69-18.58 8.69-9.88 0-18.58-8.69L480-442.85Z";
 
-	var games = load();
+	var games = [];
 	var filter = null;
 
-	function load() {
+	/**
+	 * Games live in the Go server's SQLite database when the API is
+	 * reachable. Without an API (e.g. on a static deployment) they are
+	 * kept in localStorage instead.
+	 */
+	var useServer = false;
+
+	function loadLocal() {
 		try {
 			const stored = JSON.parse(localStorage.getItem("games"));
 
@@ -110,8 +117,80 @@ function toggleTheme() {
 		}
 	}
 
-	function save() {
+	function saveLocal() {
 		localStorage.setItem("games", JSON.stringify(games));
+	}
+
+	async function initStore() {
+		try {
+			const response = await fetch("/api/games");
+
+			if (!response.ok)
+				throw new Error(response.status);
+
+			games = await response.json() ?? [];
+			useServer = true;
+		}
+		catch {
+			games = loadLocal();
+			useServer = false;
+		}
+
+		render();
+	}
+
+	async function addGame(game) {
+		if (useServer) {
+			const response = await fetch("/api/games", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(game)
+			});
+
+			if (!response.ok)
+				throw new Error(response.status);
+
+			games.push(await response.json());
+		}
+		else {
+			game.id = Date.now();
+			games.push(game);
+			saveLocal();
+		}
+
+		render();
+	}
+
+	async function deleteGame(id) {
+		if (useServer) {
+			const response = await fetch("/api/games/" + id, { method: "DELETE" });
+
+			if (!response.ok)
+				throw new Error(response.status);
+		}
+
+		games = games.filter(game => String(game.id) !== String(id));
+
+		if (!useServer)
+			saveLocal();
+
+		render();
+	}
+
+	async function clearGames() {
+		if (useServer) {
+			const response = await fetch("/api/games", { method: "DELETE" });
+
+			if (!response.ok)
+				throw new Error(response.status);
+		}
+
+		games = [];
+
+		if (!useServer)
+			saveLocal();
+
+		render();
 	}
 
 	function scoreValue(input) {
@@ -185,25 +264,29 @@ function toggleTheme() {
 	});
 
 	/* add a game */
-	document.querySelector('label[for="add-confirm-button"]').addEventListener('click', () => {
+	document.querySelector('label[for="add-confirm-button"]').addEventListener('click', async () => {
 		const home = Number(homeSelect.value);
 		const away = Number(awaySelect.value);
 
 		if (home === away) {
+			addError.textContent = "Bitte zwei verschiedene Gruppen wählen.";
 			addError.hidden = false;
 			return;
 		}
 
-		games.push({
-			id: Date.now(),
-			home: home,
-			away: away,
-			homeScore: scoreValue(homeScore),
-			awayScore: scoreValue(awayScore)
-		});
-
-		save();
-		render();
+		try {
+			await addGame({
+				home: home,
+				away: away,
+				homeScore: scoreValue(homeScore),
+				awayScore: scoreValue(awayScore)
+			});
+		}
+		catch {
+			addError.textContent = "Speichern fehlgeschlagen – ist der Server erreichbar?";
+			addError.hidden = false;
+			return;
+		}
 
 		addError.hidden = true;
 		addForm.reset();
@@ -218,10 +301,7 @@ function toggleTheme() {
 			return;
 
 		const id = button.closest('.game-card').dataset.id;
-		games = games.filter(game => String(game.id) !== id);
-
-		save();
-		render();
+		deleteGame(id).catch(error => console.error("delete failed:", error));
 	});
 
 	/* delete all games (more dialog) */
@@ -229,14 +309,12 @@ function toggleTheme() {
 		if (!confirm("Wirklich alle Spiele löschen?"))
 			return;
 
-		games = [];
-		save();
-		render();
-
-		document.getElementById("more-dialog").close();
+		clearGames()
+			.then(() => document.getElementById("more-dialog").close())
+			.catch(error => console.error("delete all failed:", error));
 	});
 
-	render();
+	initStore();
 })();
 
 /* TITLE EVENT */
