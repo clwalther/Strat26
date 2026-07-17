@@ -21,6 +21,15 @@
 	<header>
 		<div>
 			<form>
+				<input type="button" id="menu-button" hidden>
+				<label for="menu-button">
+					<!-- Menu -->
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+						<path
+							d="M120-240q-17 0-28.5-11.5T80-280q0-17 11.5-28.5T120-320h720q17 0 28.5 11.5T880-280q0 17-11.5 28.5T840-240H120Zm0-200q-17 0-28.5-11.5T80-480q0-17 11.5-28.5T120-520h720q17 0 28.5 11.5T880-480q0 17-11.5 28.5T840-440H120Zm0-200q-17 0-28.5-11.5T80-680q0-17 11.5-28.5T120-720h720q17 0 28.5 11.5T880-680q0 17-11.5 28.5T840-640H120Z" />
+					</svg>
+				</label>
+
 				<input type="button" id="add-button" hidden>
 				<label for="add-button" onclick="document.getElementById('add-dialog').showModal();">
 					<!-- Add -->
@@ -33,7 +42,7 @@
 		</div>
 
 		<div>
-			<h4 id="header-title" class="hidden">All Games</h4>
+			<h4 id="header-title" class="hidden">Alle Spiele</h4>
 		</div>
 
 		<div>
@@ -66,10 +75,33 @@
 
 	<aside data-open>
 		<div>
+			<h4>Übersicht</h4>
+			<form>
+				<input type="button" id="group-all" hidden>
+				<label for="group-all" data-group="">
+					<!-- Group -->
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+						<path
+							d="M71.93-276.62q0-30.92 15.96-55.19 15.96-24.27 42.63-37.76 57.02-27.89 114.67-43.01 57.66-15.11 126.73-15.11 69.08 0 126.73 15.11 57.66 15.12 114.68 43.01 26.67 13.49 42.63 37.76 15.96 24.27 15.96 55.19v28.16q0 24.15-17.73 42.46-17.73 18.31-43.04 18.31H132.69q-25.3 0-43.03-17.73-17.73-17.74-17.73-43.04v-28.16Zm755.38 88.93h-90.85q7.54-13.77 11.5-29.31t3.96-31.46v-33.08q0-39.38-19.28-75.07-19.29-35.68-54.72-61.23 40.23 6 76.39 18.57 36.15 12.58 69 29.73 31 16.54 47.88 38.99 16.88 22.44 16.88 49.01v33.08q0 25.3-17.73 43.04-17.73 17.73-43.03 17.73ZM272.96-533.35q-41.03-41.03-41.03-98.96 0-57.92 41.03-98.96 41.04-41.04 98.96-41.04 57.93 0 98.96 41.04 41.04 41.04 41.04 98.96 0 57.93-41.04 98.96-41.03 41.04-98.96 41.04-57.92 0-98.96-41.04Zm403.22 0q-41.12 41.04-98.87 41.04-6.77 0-17.23-1.54-10.47-1.54-17.23-3.38 23.66-28.45 36.37-63.12 12.7-34.67 12.7-72 0-37.34-12.96-71.73-12.96-34.38-36.11-63.3 8.61-3.08 17.23-4 8.61-.93 17.23-.93 57.75 0 98.87 41.04 41.12 41.04 41.12 98.96 0 57.93-41.12 98.96ZM131.92-247.69h480v-28.93q0-12.53-6.27-22.3-6.26-9.77-19.88-17.08-49.38-25.46-101.69-38.58-52.31-13.11-112.16-13.11-59.84 0-112.15 13.11-52.31 13.12-101.69 38.58-13.62 7.31-19.89 17.08-6.27 9.77-6.27 22.3v28.93Zm296.5-328.12q23.5-23.5 23.5-56.5t-23.5-56.5q-23.5-23.5-56.5-23.5t-56.5 23.5q-23.5 23.5-23.5 56.5t23.5 56.5q23.5 23.5 56.5 23.5t56.5-23.5Zm-56.5 328.12Zm0-384.62Z" />
+					</svg>
+
+					<div>
+						<span>Alle Spiele</span>
+						<!-- Chevron -->
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path
+								d="M517.85-480 354.92-642.92q-8.3-8.31-8.5-20.89-.19-12.57 8.5-21.27 8.7-8.69 21.08-8.69 12.38 0 21.08 8.69l179.77 179.77q5.61 5.62 7.92 11.85 2.31 6.23 2.31 13.46t-2.31 13.46q-2.31 6.23-7.92 11.85L397.08-274.92q-8.31 8.3-20.89 8.5-12.57.19-21.27-8.5-8.69-8.7-8.69-21.08 0-12.38 8.69-21.08L517.85-480Z" />
+						</svg>
+					</div>
+				</label>
+			</form>
+		</div>
+
+		<div>
 			<h4>Team Grün</h4>
 			<form>
 				<input type="button" id="group-1" hidden>
-				<label for="group-1">
+				<label for="group-1" data-group="1">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="green">
 						<path
@@ -86,7 +118,7 @@
 					</div>
 				</label>
 				<input type="button" id="group-2" hidden>
-				<label for="group-2">
+				<label for="group-2" data-group="2">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="green">
 						<path
@@ -103,7 +135,7 @@
 					</div>
 				</label>
 				<input type="button" id="group-3" hidden>
-				<label for="group-3">
+				<label for="group-3" data-group="3">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="green">
 						<path
@@ -120,7 +152,7 @@
 					</div>
 				</label>
 				<input type="button" id="group-4" hidden>
-				<label for="group-4">
+				<label for="group-4" data-group="4">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="green">
 						<path
@@ -143,7 +175,7 @@
 			<h4>Team Blau</h4>
 			<form>
 				<input type="button" id="group-5" hidden>
-				<label for="group-5">
+				<label for="group-5" data-group="5">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="blue">
 						<path
@@ -160,7 +192,7 @@
 					</div>
 				</label>
 				<input type="button" id="group-6" hidden>
-				<label for="group-6">
+				<label for="group-6" data-group="6">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="blue">
 						<path
@@ -177,7 +209,7 @@
 					</div>
 				</label>
 				<input type="button" id="group-7" hidden>
-				<label for="group-7">
+				<label for="group-7" data-group="7">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="blue">
 						<path
@@ -194,7 +226,7 @@
 					</div>
 				</label>
 				<input type="button" id="group-8" hidden>
-				<label for="group-8">
+				<label for="group-8" data-group="8">
 					<!-- Group -->
 					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" class="blue">
 						<path
@@ -215,10 +247,14 @@
 	</aside>
 
 	<section>
-		<h1 id="title">All Games</h1>
+		<h1 id="title">Alle Spiele</h1>
+
+		<div id="games-list"></div>
+
+		<p id="empty-state" hidden></p>
 
 		<footer>
-			For more information checkout the
+			Mehr Informationen gibt es im
 			<a href="https://github.com/clwalther/Strat26#readme">README</a>
 		</footer>
 	</section>
@@ -243,7 +279,7 @@
 			<div>
 				<form class="trans-blue-bg">
 					<input type="button" id="add-confirm-button" hidden>
-					<label for="add-confirm-button" onclick="document.getElementById('add-dialog').close();">
+					<label for="add-confirm-button">
 						<!-- Checkmark -->
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 							<path
@@ -253,7 +289,61 @@
 				</form>
 			</div>
 		</header>
-		<section></section>
+		<section>
+			<h3>Neues Spiel</h3>
+
+			<form id="add-form">
+				<label>
+					Gruppe (Heim)
+					<select id="add-home">
+						<optgroup label="Team Grün">
+							<option value="1">Gruppe 1</option>
+							<option value="2">Gruppe 2</option>
+							<option value="3">Gruppe 3</option>
+							<option value="4">Gruppe 4</option>
+						</optgroup>
+						<optgroup label="Team Blau">
+							<option value="5">Gruppe 5</option>
+							<option value="6">Gruppe 6</option>
+							<option value="7">Gruppe 7</option>
+							<option value="8">Gruppe 8</option>
+						</optgroup>
+					</select>
+				</label>
+
+				<label>
+					Gruppe (Gast)
+					<select id="add-away">
+						<optgroup label="Team Grün">
+							<option value="1">Gruppe 1</option>
+							<option value="2">Gruppe 2</option>
+							<option value="3">Gruppe 3</option>
+							<option value="4">Gruppe 4</option>
+						</optgroup>
+						<optgroup label="Team Blau">
+							<option value="5" selected>Gruppe 5</option>
+							<option value="6">Gruppe 6</option>
+							<option value="7">Gruppe 7</option>
+							<option value="8">Gruppe 8</option>
+						</optgroup>
+					</select>
+				</label>
+
+				<div class="score-row">
+					<label>
+						Punkte (Heim)
+						<input type="number" id="add-home-score" min="0" step="1" placeholder="–">
+					</label>
+
+					<label>
+						Punkte (Gast)
+						<input type="number" id="add-away-score" min="0" step="1" placeholder="–">
+					</label>
+				</div>
+
+				<p id="add-error" class="error" hidden>Bitte zwei verschiedene Gruppen wählen.</p>
+			</form>
+		</section>
 	</dialog>
 
 	<dialog id="more-dialog">
@@ -275,7 +365,22 @@
 				</form>
 			</div>
 		</header>
-		<section></section>
+		<section>
+			<h3>Strat26</h3>
+
+			<p>
+				Spielplan für Team Grün und Team Blau: Über das Plus legst du Spiele
+				zwischen den Gruppen an, über die Seitenleiste filterst du sie nach
+				Gruppe.
+			</p>
+
+			<p>
+				Mehr Informationen gibt es im
+				<a href="https://github.com/clwalther/Strat26#readme">README</a>.
+			</p>
+
+			<button type="button" id="reset-button" class="text-button">Alle Spiele löschen</button>
+		</section>
 	</dialog>
 </body>
 

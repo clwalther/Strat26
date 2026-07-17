@@ -57,7 +57,7 @@ body {
 
 	background-color: var(--secondary);
 
-	font-family: sans-serif;
+	font-family: system-ui, sans-serif;
 	font-size: 16px;
 
 	white-space: nowrap;
