@@ -1,0 +1,14 @@
+services:
+  strat26:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /app/database/database.db
+    volumes:
+      - strat26-data:/app/database
+    restart: unless-stopped
+
+volumes:
+  strat26-data:

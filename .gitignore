@@ -1,7 +1,11 @@
-database/database.db
+database/*.db
+database/*.db-shm
+database/*.db-wal
 source/assets/*
+strat26
+.DS_Store
 
-# wrangler files
+# Wrangler files
 .wrangler
 .dev.vars*
 !.dev.vars.example
