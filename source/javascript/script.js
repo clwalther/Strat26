@@ -35,14 +35,25 @@
 	const title = document.getElementById("title");
 	const header = document.getElementById("header-title");
 
-	var observer = new IntersectionObserver((entries, _) => {
-		entries.forEach(entry => {
-			if (entry.isIntersecting)
-				header.classList.add("hidden");
-			else
-				header.classList.remove("hidden");
-		});
-	}, { threshold: 1.0 });
+	document.addEventListener("scroll", event => {
+		if (title.getBoundingClientRect().top <= 0)
+			header.classList.remove("hidden");
+		else
+			header.classList.add("hidden");
+	});
+})();
 
-	observer.observe(title);
+/* DIALOG */
+(() => {
+	const dialogs = document.getElementsByTagName("dialog");
+
+	Array.from(dialogs).forEach(dialog => {
+		dialog.addEventListener("click", event => {
+			var bound = dialog.getBoundingClientRect();
+
+			if (!(bound.left <= event.clientX && event.clientX <= bound.right
+				&& bound.top <= event.clientY && event.clientY <= bound.bottom))
+				dialog.close();
+		})
+	});
 })();

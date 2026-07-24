@@ -41,11 +41,10 @@ a {
 	color: var(--blue);
 }
 
-footer {
-	font-size: 14px;
-	text-align: center;
+dialog>header {
+	position: sticky;
 }
 
-section {
-	height: 200vh !important;
+body>section {
+	max-width: calc(750px - 2*25px);
 }

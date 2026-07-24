@@ -59,12 +59,12 @@ html[theme=light] .dark {
 		--primary: #ffffff;
 		--secondary: #010101;
 		--tertiary: #c6c6c6;
-		--quatary: #1f1f1f;
+		--quatary: #191919;
 
 		--trans-primary: #ffffff36;
 		--trans-secondary: #010101ba;
 		--trans-tertiary: #c6c6c636;
-		--trans-quatary: #1f1f1fba;
+		--trans-quatary: #191919ba;
 	}
 
 	.light {
@@ -80,12 +80,12 @@ html[theme=dark] {
 	--primary: #ffffff;
 	--secondary: #010101;
 	--tertiary: #c6c6c6;
-	--quatary: #1f1f1f;
+	--quatary: #191919;
 
 	--trans-primary: #ffffff36;
 	--trans-secondary: #010101ba;
 	--trans-tertiary: #c6c6c636;
-	--trans-quatary: #1f1f1fba;
+	--trans-quatary: #191919ba;
 }
 
 html[theme=dark]:has(div.dialog.visible) {

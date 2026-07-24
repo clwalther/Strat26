@@ -2,18 +2,21 @@ body>header {
 	background: linear-gradient(to top,
 			var(--trans-secondary),
 			var(--secondary));
-
-	backdrop-filter: blur(3px);
-	-webkit-backdrop-filter: blur(3px);
 }
 
-body>header #header-title {
+dialog>header {
+	background: linear-gradient(to top,
+			var(--trans-quatary),
+			var(--trans-quatary));
+}
+
+header #header-title {
 	opacity: 1;
 	transform: translateY(0px);
 	transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
 }
 
-body>header #header-title.hidden {
+header #header-title.hidden {
 	opacity: 0;
 	transform: translateY(6px);
 }
