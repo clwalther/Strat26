@@ -1,0 +1,47 @@
+section form {
+	height: inherit;
+	width: inherit;
+
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	border-radius: calc(var(--input-height) / 2);
+
+	display: grid;
+
+	overflow-x: hidden;
+	overflow-y: hidden;
+
+	background: var(--quatary);
+}
+
+section form>label {
+	margin: 0;
+	border: 0;
+	padding: 0;
+
+	padding-left: 24px;
+	padding-right: 24px;
+
+	cursor: pointer;
+}
+
+section form>label:hover {
+	background-color: var(--trans-tertiary);
+}
+
+section form>label>div {
+	border-top: 0.7px solid var(--trans-primary);
+	border-bottom: 0.7px solid var(--trans-primary);
+
+	display: grid;
+}
+
+section form>label:first-of-type>div {
+	border-top: 0;
+}
+
+section form>label:last-of-type>div {
+	border-bottom: 0;
+}

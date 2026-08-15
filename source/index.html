@@ -15,6 +15,7 @@
 	<link rel="stylesheet" href="./css/layout.css">
 	<link rel="stylesheet" href="./css/header.css">
 	<link rel="stylesheet" href="./css/aside.css">
+	<link rel="stylesheet" href="./css/section.css">
 </head>
 
 <body>
@@ -68,9 +69,12 @@
 		<h1 id="title">All Games</h1>
 
 		<form>
-			<input type="button" id="game-1" hidden>
+			<input type="button" id="game-1" hidden onclick="window.location.href = './overview?v=1'">
 			<label for="game-1">
-
+				<div>
+					<span>Game Name 1</span>
+					<span>Running - 60 Minutes</span>
+				</div>
 			</label>
 		</form>
 
