@@ -4,128 +4,170 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Strat26</title>
+	<title>Strategiespiel 2026</title>
 
-	<link rel="shortcut icon" href="./images/favicon.png" type="image/x-icon">
-
-	<script src="./javascript/script.js" defer></script>
-
-	<link rel="stylesheet" href="./css/theme.css">
-	<link rel="stylesheet" href="./css/style.css">
-	<link rel="stylesheet" href="./css/layout.css">
-	<link rel="stylesheet" href="./css/header.css">
-	<link rel="stylesheet" href="./css/aside.css">
-	<link rel="stylesheet" href="./css/section.css">
+	<link rel="icon" href="data:,">
 </head>
 
 <body>
-	<header>
-		<div>
-			<form>
-				<input type="button" id="add-button" hidden>
-				<label for="add-button" onclick="">
-					<!-- Add -->
-					<svg xmlns=" http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-						<path
-							d="M454-454H286q-11.05 0-18.52-7.42-7.48-7.42-7.48-18.38 0-10.97 7.48-18.58Q274.95-506 286-506h168v-168q0-11.05 7.42-18.52 7.42-7.48 18.38-7.48 10.97 0 18.58 7.48Q506-685.05 506-674v168h168q11.05 0 18.52 7.42 7.48 7.42 7.48 18.38 0 10.97-7.48 18.58Q685.05-454 674-454H506v168q0 11.05-7.42 18.52-7.42 7.48-18.38 7.48-10.97 0-18.58-7.48Q454-274.95 454-286v-168Z" />
-					</svg>
-				</label>
-			</form>
-		</div>
+	<h1>Strategiespiel 2026</h1>
 
-		<div>
-			<h4 id="header-title" class="hidden">All Games</h4>
-		</div>
+	<button id="button-start" type="button" disabled>Start / Resume</button>
+	<button id="button-pause" type="button" disabled>Pause</button>
+	<button id="button-backup" type="button" disabled>Backup</button>
 
-		<div>
-			<form>
-				<input type="button" id="theme-button" hidden onclick="toggleTheme();">
-				<label for="theme-button">
-					<!-- Sun -->
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -1060 1160 1160" class="dark">
-						<path
-							d="M565-395q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Zm-206.96 36.73Q308-408.53 308-480.23q0-71.69 50.27-121.73Q408.53-652 480.23-652q71.69 0 121.73 50.27Q652-551.47 652-479.77q0 71.69-50.27 121.73Q551.47-308 479.77-308q-71.69 0-121.73-50.27ZM84-454q-11.07 0-18.53-7.41-7.47-7.4-7.47-18.38 0-10.98 7.47-18.59Q72.93-506 84-506h106q11.07 0 18.53 7.41 7.47 7.4 7.47 18.38 0 10.98-7.47 18.59Q201.07-454 190-454H84Zm686 0q-11.07 0-18.53-7.41-7.47-7.4-7.47-18.38 0-10.98 7.47-18.59Q758.93-506 770-506h106q11.07 0 18.53 7.41 7.47 7.4 7.47 18.38 0 10.98-7.47 18.59Q887.07-454 876-454H770ZM461.62-751.47Q454-758.93 454-770v-106q0-11.07 7.41-18.53 7.4-7.47 18.38-7.47 10.98 0 18.59 7.47Q506-887.07 506-876v106q0 11.07-7.41 18.53-7.4 7.47-18.38 7.47-10.98 0-18.59-7.47Zm0 686Q454-72.93 454-84v-106q0-11.07 7.41-18.53 7.4-7.47 18.38-7.47 10.98 0 18.59 7.47Q506-201.07 506-190v106q0 11.07-7.41 18.53-7.4 7.47-18.38 7.47-10.98 0-18.59-7.47ZM256.23-667.38l-57.31-57.93q-7.92-7.31-8.11-17.38-.19-10.08 8.11-18.39 7.75-8.3 17.91-8.3 10.17 0 17.86 8.3L293-704.15q8.69 8.25 8.69 18.6 0 10.36-8.69 18.61-7.31 8.25-17.88 8.25-10.58 0-18.89-8.69Zm469.08 468.46L667-255.85q-8.69-7.97-8.69-18.21 0-10.25 8.69-18.94 7.31-8.31 17.88-8.31 10.58 0 18.89 8.69l57.31 57.93q7.92 7.31 8.11 17.38.19 10.08-7.64 18.39-8.78 8.3-18.17 8.3-9.38 0-18.07-8.3ZM666.94-667q-8.25-7.31-8.25-17.88 0-10.58 8.69-18.89l57.93-57.31q8.31-7.92 17.88-7.61 9.58.31 17.89 7.66 8.3 8.26 8.3 17.65 0 9.38-8.3 18.07L704.15-667q-8.25 8.69-18.6 8.69-10.36 0-18.61-8.69ZM198.92-198.92q-8.3-7.75-8.3-17.91 0-10.17 8.3-17.86L255.85-293q7.97-7.69 18.21-7.69 10.25 0 18.94 7.69 7.92 8.31 7.46 18.55-.45 10.24-7.84 18.22l-57.93 57.31q-7.69 8.3-17.57 8.5-9.89.19-18.2-8.5ZM480-480Z" />
-					</svg>
-					<!-- Moon -->
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -1060 1160 1160" class="light">
-						<path
-							d="M481.15-164Q350-164 257.58-256.42q-92.42-92.43-92.42-223.61 0-108.35 67.26-193.93 67.27-85.58 177.3-111.3 11.51-3.05 20.62 1.22 9.12 4.27 14.2 11.73 5.07 7.47 6.07 18.12 1 10.65-4.07 21.27-9.39 19.54-14.39 41.33t-5 43.59q0 93.33 64.34 157.67Q555.82-426 649.15-426q25.42 0 48.29-5.96 22.87-5.96 42.02-13.81 9.85-4.3 19.23-2.54 9.39 1.77 15.54 6.77 6.85 5 10.92 13.16 4.08 8.15 1.31 17.84-21.31 108-106.81 177.27Q594.15-164 481.15-164Zm-1-52q82.93 0 148.89-46.01 65.96-46 96.11-119.99-20 5-39 8t-38 3q-114.27 0-194.63-80.48-80.37-80.48-80.37-194.91 0-18.61 3-37.61t8-39q-74 30-120 95.93t-46 148.81q0 109.26 76.73 185.76Q371.61-216 480.15-216Zm-8-254Z" />
-					</svg>
-				</label>
+	<p>
+		Spiel Status:&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp;<span id="span-status"><i>wird geladen...</i></span>
+		<br>
+		Spiel Dauer:&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp;<span id="span-duration"><i>wird geladen...</i></span>
+		<br>
+		Server Verbindung:&emsp;<span id="span-connection"><i>wird geladen...</i></span>
+		<br>
+		Datenbank Version:&emsp;<span id="span-version"><i>wird geladen...</i></span>
+	</p>
 
-				<input type="button" id="more-button" hidden>
-				<label for="more-button" onclick="document.getElementById('more-dialog').showModal();">
-					<!-- More -->
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-						<path
-							d="M273.02-428q-21.54 0-36.66-15.34-15.13-15.34-15.13-36.87 0-21.54 15.34-36.66Q251.91-532 273.44-532q21.54 0 36.67 15.34 15.12 15.34 15.12 36.87 0 21.54-15.34 36.66Q294.56-428 273.02-428Zm206.77 0q-21.54 0-36.66-15.34Q428-458.68 428-480.21q0-21.54 15.34-36.66Q458.68-532 480.21-532q21.54 0 36.66 15.34Q532-501.32 532-479.79q0 21.54-15.34 36.66Q501.32-428 479.79-428Zm206.77 0q-21.54 0-36.67-15.34-15.12-15.34-15.12-36.87 0-21.54 15.34-36.66Q665.44-532 686.98-532t36.66 15.34q15.13 15.34 15.13 36.87 0 21.54-15.34 36.66Q708.09-428 686.56-428Z" />
-					</svg>
-				</label>
-			</form>
-		</div>
-	</header>
+	<p>Hier geht es zum Interface (relevant für die MCs):</p>
+	<ul>
+		<li><a href="./interface-blue/">Mannschaft Blau</a></li>
+		<li><a href="./interface-green/">Mannschaft Grün</a></li>
+	</ul>
 
-	<section>
-		<h1 id="title">All Games</h1>
-
-		<form>
-			<input type="button" id="game-1" hidden onclick="window.location.href = './overview?v=1'">
-			<label for="game-1">
-				<div>
-					<span>Game Name 1</span>
-					<span>Running - 60 Minutes</span>
-				</div>
-			</label>
-		</form>
-
-		<footer>
-			For more information checkout the
-			<a href="https://github.com/clwalther/Strat26#README">README</a>
-		</footer>
-	</section>
-
-	<dialog id="more-dialog">
-		<header>
-			<div></div>
-
-			<div></div>
-
-			<div>
-				<form>
-					<input type="button" id="more-close-button" hidden>
-					<label for="more-close-button" onclick="document.getElementById('more-dialog').close();">
-						<!-- Close -->
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path
-								d="M480-442.85 309.08-271.92q-8.31 8.3-17.89 8-9.57-.31-18.27-9-8.69-8.7-8.69-18.58 0-9.88 8.69-18.58L442.85-480 271.92-650.92q-8.3-8.31-8-18.39.31-10.07 9-18.77 8.7-8.69 18.58-8.69 9.88 0 18.58 8.69L480-517.15l170.92-170.93q8.31-8.3 18.39-8.5 10.07-.19 18.77 8.5 8.69 8.7 8.69 18.58 0 9.88-8.69 18.58L517.15-480l170.93 170.92q8.3 8.31 8.5 17.89.19 9.57-8.5 18.27-8.7 8.69-18.58 8.69-9.88 0-18.58-8.69L480-442.85Z" />
-						</svg>
-					</label>
-				</form>
-			</div>
-		</header>
-
-		<section>
-			<h1>Status</h1>
-		</section>
-	</dialog>
+	<p>Hier geht es zum Dashboard (relevant für die Knaben):</p>
+	<ul>
+		<li><a href="./dashboard/">Dashboard</a></li>
+	</ul>
 </body>
 
 <script>
-	/**
-	 * Button method for toggeling the lighting theme.
-	 */
-	function toggleTheme() {
-		const html = document.getElementsByTagName("html")[0];
+	const button_start = document.getElementById("button-start");
+	const button_pause = document.getElementById("button-pause");
+	const button_backup = document.getElementById("button-backup");
 
-		if (html.getAttribute("theme") == "dark") {
-			html.setAttribute("theme", "light");
-			localStorage.setItem("theme", "light");
-		}
-		else {
-			html.setAttribute("theme", "dark");
-			localStorage.setItem("theme", "dark");
+	const span_status = document.getElementById("span-status");
+	const span_duration = document.getElementById("span-duration");
+	const span_connection = document.getElementById("span-connection");
+	const span_version = document.getElementById("span-version");
+</script>
+
+<script>
+	let timeLoaded = NaN;
+	let clockRunning = false;
+
+	async function update() {
+		// reset all buttons to disabled
+		resetDOM();
+
+		const start = performance.now();
+		const resp = await fetch("/api/status");
+		const end = performance.now();
+
+		if (resp.status == 200) {
+			const data = await resp.json();
+
+			timeLoaded = end;
+
+			span_status.innerText = data.status;
+			span_duration.innerText =
+				`${Math.floor(data.duration / 3600)} hrs ` +
+				`${Math.floor(data.duration / 60) % 60} min ` +
+				`${Math.floor(data.duration) % 60} sec`;
+			span_connection.innerText = `${Math.round(end - start)} ms`;
+			span_version.innerText = data.version;
+
+			if (data.status == "PAUSED") {
+				button_start.removeAttribute("disabled");
+				button_backup.removeAttribute("disabled");
+
+				clockRunning = false;
+			} else if (data.status == "RUNNING") {
+				button_pause.removeAttribute("disabled");
+				button_backup.removeAttribute("disabled");
+
+				if (!clockRunning) {
+					clockRunning = true;
+					clock(data.duration);
+				}
+			}
+		} else {
+			alert(`Packet to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
 		}
 	}
+
+	function resetDOM() {
+		button_start.setAttribute("disabled", "");
+		button_pause.setAttribute("disabled", "");
+		button_backup.setAttribute("disabled", "");
+
+		span_status.innerText = "wird geladen...";
+		span_duration.innerText = "wird geladen...";
+		span_connection.innerText = "wird geladen...";
+		span_version.innerText = "wird geladen...";
+	}
+
+	function clock(duration) {
+		if (clockRunning) {
+			let new_duration = duration + (performance.now() - timeLoaded) / 1000;
+
+			span_duration.innerText =
+				`${Math.floor(new_duration / 3600)} hrs ` +
+				`${Math.floor(new_duration / 60) % 60} min ` +
+				`${Math.floor(new_duration) % 60} sec`;
+
+			setTimeout(() => clock(duration), 1000);
+		}
+	}
+
+	update();
+</script>
+
+<script>
+	button_start.addEventListener("click", async () => {
+		let resp = await fetch("/api/status", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				status: "RUNNING"
+			})
+		});
+
+		if (resp.status == 200) {
+			update();
+		} else {
+			alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+	});
+
+	button_pause.addEventListener("click", async () => {
+		let resp = await fetch("/api/status", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				status: "PAUSED"
+			})
+		});
+
+		if (resp.status == 200) {
+			update();
+		} else {
+			alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+	});
+
+	button_backup.addEventListener("click", async () => {
+		let resp = await fetch("/api/backup", {
+			method: "POST"
+		});
+
+		if (resp.status == 200) {
+			update();
+		} else {
+			alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+	});
 </script>
 
 </html>

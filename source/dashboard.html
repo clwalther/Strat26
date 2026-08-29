@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Strategiespiel 2026 - Dashboard</title>
+
+	<style>
+		:root {
+			--aspect: calc();
+		}
+
+		body {
+			margin: 0;
+			overflow: hidden;
+		}
+
+		.container {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+
+			height: calc(100vh - 64px);
+			width: 100vw;
+		}
+
+		aside {
+			width: 250px;
+			background-color: red;
+		}
+
+		main {
+			height: 100%;
+			width: calc(100vw - 2*250px);
+		}
+
+		.pitch {
+			height: calc(100% - 64px);
+			width: 100%;
+
+			background-image: url("/assets/image.png");
+			background-position: center;
+			background-repeat: no-repeat;
+			background-size: contain;
+		}
+
+		header,
+		footer {
+			height: 64px;
+		}
+	</style>
+
+</head>
+
+
+<body id="body">
+	<header>
+
+	</header>
+	<div class="container">
+		<aside class="sidebar left" onclick="document.getElementById('body').style = 'transform: translateX(50vw);';">
+			Left aside
+		</aside>
+
+		<main class="main" onclick="document.getElementById('body').style = 'transform: translateX(0vw);';">
+			<div class="pitch"></div>
+
+			<footer>
+				<div></div>
+			</footer>
+		</main>
+
+		<aside class="sidebar right" onclick="document.getElementById('body').style = 'transform: translateX(-50vw);';">
+			Right aside
+		</aside>
+	</div>
+</body>
+
+</html>

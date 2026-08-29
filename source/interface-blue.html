@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Strategiespiel 2026 - Interface Blue</title>
+
+	<link rel="icon" href="data:,">
+
+	<style>
+		article {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 16px;
+		}
+
+		section {
+			flex: 1 0 calc(523.6px + 8px);
+			width: calc(50% - 8px);
+		}
+
+		.line-up>div,
+		.reserve {
+			display: grid;
+			justify-items: center;
+			align-content: start;
+		}
+
+		#container-strikers,
+		#container-midfielders,
+		#container-defenders,
+		#container-goalkeeper,
+		#container-bench {
+			width: calc(100% - 64px);
+			height: 80px;
+
+			margin: 12px;
+			padding: 16px;
+			border: 2px dashed black;
+
+			display: flex;
+			justify-content: space-around;
+		}
+
+		#container-goalkeeper {
+			width: 85px !important;
+		}
+
+		#container-bench {
+			width: calc(100% - 2*16px - 2*12px) !important;
+			height: auto !important;
+
+			flex-wrap: wrap;
+			gap: 12px;
+		}
+	</style>
+
+	<style>
+		.player {
+			height: 70px;
+			width: 75px;
+
+			margin: 2px;
+			border: 2px solid black;
+
+			display: grid;
+
+			align-content: space-evenly;
+			justify-items: center;
+			text-align: center;
+
+			cursor: pointer;
+
+			overflow: hidden;
+			font-size: 13px;
+		}
+
+		.player>button {
+			width: 45px;
+
+			font-size: 12px;
+
+		}
+	</style>
+
+	<style>
+		dialog {
+			height: 500px;
+			width: 400px;
+
+			background: url(../assets/blue.png);
+			background-position-x: center;
+			background-position-y: top;
+			background-size: contain;
+
+			overflow: hidden;
+		}
+
+		dialog>h2 {
+			position: absolute;
+			width: inherit;
+
+			top: 90px;
+			text-align: center;
+		}
+
+		dialog>div {
+			position: absolute;
+			left: 0px;
+			bottom: 0px;
+
+			background: linear-gradient(#fff0 0%, #fff 30%);
+			height: calc(350px - 32px - 112px);
+			width: calc(100% - 2*32px);
+
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			padding: 32px;
+			padding-top: 112px;
+		}
+
+		dialog>div>div {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		dialog>div>div>input {
+			margin: 8px;
+			height: 24px;
+			width: 70px;
+		}
+
+		dialog>div>button {
+			margin-left: 16px;
+			margin-right: 16px;
+		}
+
+		body:has(dialog:is([open])) {
+			overflow: hidden;
+		}
+	</style>
+</head>
+
+<body>
+	<h2>Mannschaft <b style="color: blue">Blau</b> - Aufstellung <span id="span-line-up-ammount"><i>wird
+				geladen...</i>
+	</h2>
+
+	<article>
+		<section class="line-up">
+			<div>
+				<span>Sturm <span id="span-strikers-ammount"><i>wird geladen...</i></span></span>
+				<div id="container-strikers"></div>
+				<span>Mittelfeld <span id="span-midfielders-ammount"><i>wird geladen...</i></span></span>
+				<div id="container-midfielders"></div>
+				<span>Verteidigung <span id="span-defenders-ammount"><i>wird geladen...</i></span></span>
+				<div id="container-defenders"></div>
+				<span>Torwart <span id="span-goalkeeper-ammount"><i>wird geladen...</i></span></span>
+				<div id="container-goalkeeper"></div>
+			</div>
+		</section>
+
+		<section class="reserve">
+			<span>Auswechselbank <span id="span-bench-ammount"><i>wird geladen...</i></span></span>
+			<div id="container-bench"></div>
+		</section>
+	</article>
+
+	<div id="container-dialog"></div>
+</body>
+
+<script>
+	const container_strikers = document.getElementById("container-strikers");
+	const container_midfielders = document.getElementById("container-midfielders");
+	const container_defenders = document.getElementById("container-defenders");
+	const container_goalkeeper = document.getElementById("container-goalkeeper");
+	const container_bench = document.getElementById("container-bench");
+
+	const container_dialog = document.getElementById("container-dialog");
+
+	const span_bench_ammount = document.getElementById("span-bench-ammount");
+	const span_line_up_ammount = document.getElementById("span-line-up-ammount");
+	const span_goalkeeper_ammount = document.getElementById("span-goalkeeper-ammount");
+	const span_defenders_ammount = document.getElementById("span-defenders-ammount");
+	const span_midfielders_ammount = document.getElementById("span-midfielders-ammount");
+	const span_strikers_ammount = document.getElementById("span-strikers-ammount");
+</script>
+
+<script>
+	let team = [];
+
+	async function update() {
+		resetDOM();
+
+		const resp = await fetch("/api/players");
+
+		if (resp.status == 200) {
+			const data = await resp.json();
+			let index = 0
+
+			data.players.forEach(player => {
+				if (player.team == "blau") {
+					team.push(player);
+
+					let playerDialog = createPlayerDialog(index);
+					let playerCard = createPlayerCard(player, playerDialog);
+
+					container_dialog.appendChild(playerDialog);
+
+					switch (player.role) {
+						case "BENCH":
+							container_bench.insertBefore(playerCard, container_bench.childNodes[player.position]);
+							break;
+						case "GOALKEEPER":
+							container_goalkeeper.insertBefore(playerCard, container_goalkeeper.childNodes[player.position]);
+							break;
+						case "DEFENDERS":
+							container_defenders.insertBefore(playerCard, container_defenders.childNodes[player.position]);
+							break;
+						case "MIDFIELDERS":
+							container_midfielders.insertBefore(playerCard, container_midfielders.childNodes[player.position]);
+							break;
+						case "STRIKERS":
+							container_strikers.insertBefore(playerCard, container_strikers.childNodes[player.position]);
+							break;
+
+						default:
+							alert(`Player ${player.name} with role ${player.role} could not be sorted correctly.`);
+							break;
+					}
+
+					index++;
+				}
+			});
+		} else {
+			alert(`Packet to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+
+		updateDOM();
+	}
+
+	function resetDOM() {
+		container_strikers.innerHTML = "";
+		container_midfielders.innerHTML = "";
+		container_defenders.innerHTML = "";
+		container_goalkeeper.innerHTML = "";
+		container_bench.innerHTML = "";
+		container_dialog.innerHTML = "";
+
+		span_bench_ammount.innerHTML = "<i>wird geladen...</i>";
+		span_line_up_ammount.innerHTML = "<i>wird geladen...</i>";
+		span_goalkeeper_ammount.innerHTML = "<i>wird geladen...</i>";
+		span_defenders_ammount.innerHTML = "<i>wird geladen...</i>";
+		span_midfielders_ammount.innerHTML = "<i>wird geladen...</i>";
+		span_strikers_ammount.innerHTML = "<i>wird geladen...</i>";
+	}
+
+	function updateDOM() {
+		[
+			[span_bench_ammount, container_bench, 26],
+			[span_goalkeeper_ammount, container_goalkeeper, 1],
+			[span_defenders_ammount, container_defenders, 6],
+			[span_midfielders_ammount, container_midfielders, 6],
+			[span_strikers_ammount, container_strikers, 6],
+		].forEach(tuple => {
+			let span = tuple[0];
+			let container = tuple[1];
+			let ammount = tuple[2];
+
+			span.innerText = `(${container.querySelectorAll(":scope>.player").length}/${ammount})`;
+		});
+
+		let count = 0;
+		team.forEach(player => {
+			if (player.punishment == "RED" || player.punishment == "YELLOW-RED")
+				count++;
+		});
+
+		span_line_up_ammount.innerText = `(${(
+			container_goalkeeper.querySelectorAll(":scope>.player").length
+			+ container_defenders.querySelectorAll(":scope>.player").length
+			+ container_midfielders.querySelectorAll(":scope>.player").length
+			+ container_strikers.querySelectorAll(":scope>.player").length)}/${11 - count})`;
+	}
+
+
+	function createPlayerCard(player, playerDialog) {
+		let playerCard = document.createElement("div");
+		let playerCardName = document.createElement("span");
+		let playerCardButton = document.createElement("button");
+
+		playerCard.id = player.id
+		playerCard.classList.add("player");
+		playerCard.setAttribute("draggable", "true");
+		playerCard.appendChild(playerCardName);
+		playerCard.appendChild(playerCardButton);
+
+		playerCard.addEventListener("dragstart", (e) => {
+			e.dataTransfer.setData("text/plain", player.id);
+
+			playerCard.style = "display: none;"
+		})
+		playerCard.addEventListener("dragend", (e) => {
+			playerCard.style = "display: grid;"
+		})
+		playerCardButton.addEventListener("click", (_) => { playerDialog.showModal(); })
+
+		playerCardName.innerText = player.name;
+		playerCardButton.innerText = "Edit"
+
+		return playerCard;
+	}
+
+	function createPlayerDialog(index) {
+		let player = team[index];
+
+		let dialog = document.createElement("dialog");
+		let playerName = document.createElement("h2");
+		let playerDOP = document.createElement("input");
+
+		let container = document.createElement("div");
+		let playerPAC = document.createElement("input");
+		let playerSHO = document.createElement("input");
+		let playerPAS = document.createElement("input");
+		let playerDRI = document.createElement("input");
+		let playerDEF = document.createElement("input");
+		let playerPHY = document.createElement("input");
+		let cancel = document.createElement("button");
+		let submit = document.createElement("button");
+
+		playerName.innerText = player.name;
+
+		dialog.appendChild(playerName);
+		dialog.appendChild(container);
+		dialog.appendChild(playerDOP);
+
+		playerDOP.setAttribute("type", "number");
+		playerDOP.setAttribute("max", "100");
+		playerDOP.setAttribute("min", "0");
+		playerDOP.setAttribute("value", player.dop);
+
+		cancel.innerText = "Abbrechen";
+		submit.innerText = "Speichern";
+
+		[
+			[playerPAC, "PAC", player.pac],
+			[playerDRI, "DRI", player.dri],
+
+			[playerSHO, "SHO", player.sho],
+			[playerDEF, "DEF", player.def],
+
+			[playerPAS, "PAS", player.pas],
+			[playerPHY, "PHY", player.phy]
+		].forEach(tuple => {
+			let input = tuple[0];
+			let name = tuple[1];
+			let value = tuple[2];
+
+			let inputContainer = document.createElement("div");
+			let inputName = document.createElement("span");
+
+			input.setAttribute("type", "number");
+			input.setAttribute("max", "100");
+			input.setAttribute("min", "0");
+			input.setAttribute("value", value);
+			inputName.innerText = name;
+
+			container.appendChild(inputContainer);
+			inputContainer.appendChild(input);
+			inputContainer.appendChild(inputName);
+		});
+
+		container.appendChild(cancel);
+		container.appendChild(submit);
+
+
+		dialog.addEventListener("click", (e) => {
+			if (e.target == dialog) {
+				let rect = dialog.getClientRects()[0];
+
+				if (!(rect.x <= e.clientX && e.clientX <= rect.x + rect.width
+					&& rect.y <= e.clientY && e.clientY <= rect.y + rect.height)) {
+					dialog.close();
+					update();
+				}
+			}
+		});
+		cancel.addEventListener("click", (e) => {
+			dialog.close();
+			update();
+		});
+		["click", "keypress"].forEach(eventType => {
+			submit.addEventListener(eventType, async (e) => {
+				e.preventDefault();
+				player.pac = playerPAC.valueAsNumber;
+				player.sho = playerSHO.valueAsNumber;
+				player.pas = playerPAS.valueAsNumber;
+				player.dri = playerDRI.valueAsNumber;
+				player.def = playerDEF.valueAsNumber;
+				player.phy = playerPHY.valueAsNumber;
+				player.dop = playerDOP.valueAsNumber;
+
+				// post update to server
+				resp = await fetch("/api/player", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						"player": player
+					})
+				});
+
+				if (resp.status == 200) {
+					update();
+				} else {
+					alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+				}
+			});
+		});
+
+		return dialog;
+	}
+
+	update();
+</script>
+
+<script>
+	// ondrag
+	[
+		[container_goalkeeper, 1],
+		[container_defenders, 6],
+		[container_midfielders, 6],
+		[container_strikers, 6],
+		[container_bench, 26]
+	].forEach(tuple => {
+		let container = tuple[0];
+		let max_ammount = tuple[1];
+
+		container.addEventListener("dragover", (e) => {
+			let element = document.getElementById(e.dataTransfer.getData("text/plain"));
+
+			if (((container_goalkeeper.querySelectorAll(":scope>.player").length
+				+ container_defenders.querySelectorAll(":scope>.player").length
+				+ container_midfielders.querySelectorAll(":scope>.player").length
+				+ container_strikers.querySelectorAll(":scope>.player").length) < 11 || element.parentElement != container_bench || element.parentElement == container)
+				&& ((container.querySelectorAll(":scope>.player").length < max_ammount) || element.parentElement == container))
+				e.preventDefault();
+		});
+	});
+
+	// ondrop
+	[
+		container_goalkeeper,
+		container_defenders,
+		container_midfielders,
+		container_strikers,
+		container_bench,
+	].forEach(container => {
+		container.addEventListener("drop", async (e) => {
+			let playerCard = document.getElementById(e.dataTransfer.getData("text/plain"));
+
+			// first delete the child from is current home
+			playerCard.parentElement.removeChild(playerCard);
+
+			// drop into the correct slot
+			let index = 0;
+			for (; index < container.childNodes.length; index++) {
+				let rect = container.childNodes[index].getBoundingClientRect();
+
+				if (e.clientX < rect.x + rect.width / 2 && e.clientY < rect.y + rect.height + 6) {
+					break;
+				}
+			}
+			container.insertBefore(playerCard, container.childNodes[index]);
+
+			// update the positions of all players in the affected containers
+			[
+				[container_goalkeeper, "GOALKEEPER"],
+				[container_defenders, "DEFENDERS"],
+				[container_midfielders, "MIDFIELDERS"],
+				[container_strikers, "STRIKERS"],
+				[container_bench, "BENCH"],
+			].forEach(tuple => { update_players_in(tuple[0], tuple[1]); });
+
+			// post update to server
+			resp = await fetch("/api/positions", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					"players": team
+				})
+			});
+
+			if (resp.status == 200) {
+				updateDOM();
+			} else {
+				alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+			}
+
+		})
+	});
+
+	function update_players_in(container, role) {
+		for (let i = 0; i < container.childNodes.length; i++) {
+			for (let j = 0; j < team.length; j++) {
+				if (container.childNodes[i].id == team[j].id) {
+					team[j].role = role;
+					team[j].position = i;
+				}
+			}
+		}
+	}
+</script>
+
+</html>

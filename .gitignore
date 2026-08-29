@@ -1,2 +1,5 @@
-database/database.db
+database/*.db
 source/assets/*
+venv/
+__pycache__/
+help.py
