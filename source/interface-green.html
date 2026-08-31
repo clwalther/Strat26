@@ -314,6 +314,7 @@
 		/* === DROP === */
 		container.addEventListener("drop", async (e) => {
 			let card = document.getElementById(e.dataTransfer.getData("text/plain"));
+			card.parentElement.removeChild(card);
 
 			let i = 0;
 			for (; i < container.childNodes.length; i++) {
@@ -324,7 +325,6 @@
 				}
 			}
 
-			card.parentElement.removeChild(card);
 			container.insertBefore(card, container.childNodes[i]);
 
 			let team = updateContiners();
