@@ -15,8 +15,12 @@
 		}
 
 		body {
-			height: calc(100vh - 16px);
-			width: calc(100vw - 16px);
+			position: relative;
+
+			height: 100vh;
+			width: 100vw;
+
+			margin: 0;
 
 			display: flex;
 			align-items: center;
@@ -25,80 +29,125 @@
 
 			overflow: hidden;
 
-			background-color: green;
-
 			font-family: Arial, Helvetica, sans-serif;
-			font-weight: 700;
+			font-size: 13px;
+		}
+
+		body::after {
+			content: "";
+			position: absolute;
+			top: -250%;
+			left: -250%;
+			z-index: -2;
+
+			background-image: url(../assets/background.png);
+			background-size: 100px;
+
+			transform: rotate(25deg);
+
+			width: 500%;
+			height: 500%;
 		}
 
 		body>aside {
-			flex: 0 1 25%;
+			flex: 0 1 300px;
 
-			min-width: 375px;
+			min-width: fit-content;
 			height: calc(100% - 10px);
 
 			cursor: pointer;
 
 			transition: flex 300ms ease, width 300ms ease, opacity 300ms ease;
+		}
 
-			border: 5px dashed white;
+		body>aside#left {
+			display: flex;
+			justify-content: end;
+			align-items: center;
+		}
+
+		body>aside#right {
+			display: flex;
+			justify-content: start;
+			align-items: center;
+		}
+
+		body.focus-left>aside#right {
+			display: none;
+		}
+
+		body.focus-left>aside#left {
+			flex: 1 1 50%;
+		}
+
+		body.focus-left>aside#center {
+			flex: 1 1 50%;
+		}
+
+		body.focus-right>aside#left {
+			display: none;
+		}
+
+		body.focus-right>aside#right {
+			flex: 1 1 50%;
+		}
+
+		body.focus-right>aside#center {
+			flex: 1 1 50%;
+		}
+
+		body>aside>div {
+			width: 230px;
+
+			padding: 2px;
+			padding-left: 4px;
+			padding-right: 4px;
+			border-radius: 10px;
+
+			background: url(../assets/border.png);
+			background-size: 500px;
+			background-position: center;
 		}
 
 		body>article {
 			display: grid;
 			justify-items: center;
-			align-items: center;
 
 			flex: 1 1 50%;
 
 			min-width: 500px;
-			height: 100%;
+			height: calc(100% - 26px - 26px);
+
+			padding-top: 26px;
+			padding-bottom: 26px;
 
 			cursor: pointer;
 
 			transition: flex 300ms ease, width 300ms ease;
 		}
 
-		body.focus-left #right {
-			display: none;
-		}
-
-		body.focus-left #left {
-			flex: 1 1 50%;
-		}
-
-		body.focus-left #center {
-			flex: 1 1 50%;
-		}
-
-		body.focus-right #left {
-			display: none;
-		}
-
-		body.focus-right #right {
-			flex: 1 1 50%;
-		}
-
-		body.focus-right #center {
-			flex: 1 1 50%;
-		}
-
-		body>aside>div {
-			height: 100%;
-
+		body>article>div {
 			display: grid;
-			justify-content: space-around;
-			align-content: space-around;
-
-
-			grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-			grid-auto-rows: minmax(80px, auto);
 			justify-items: center;
-			align-items: center;
+			align-content: space-between;
+
+			height: 100%;
+			width: 100%;
 		}
 
-		body>article>section {
+		body.focus-right>article>div {
+			width: 200%;
+			translate: -25%;
+		}
+
+		body.focus-left>article>div {
+			width: 200%;
+			translate: 25%;
+		}
+
+		body>article>div>section {
 			width: 100%;
+			height: calc(100vh - 240px);
 
 			background-image: url(../assets/pitch.jpg);
 			background-position: center;
@@ -106,24 +155,13 @@
 			background-repeat: no-repeat;
 		}
 
-		body.focus-right>article>section {
-			width: 200%;
-			translate: -25%;
-		}
-
-		body.focus-left>article>section {
-			width: 200%;
-			translate: 25%;
-		}
-
-		body>article>section>div {
+		body>article>div>section>div {
 			display: none;
 		}
 	</style>
 
-
 	<style>
-		.player {
+		body>article>section>div>.player {
 			height: 70px;
 			width: 75px;
 
@@ -138,17 +176,194 @@
 
 
 			overflow: hidden;
-			font-size: 13px;
+			font-size: 10px;
 		}
 
-		.player.yellow {
-			border-color: yellow;
-			background-color: lightyellow;
+		body>aside>div>.player {
+			height: 36px;
+			width: 230px;
+
+			margin-top: 2px;
+			margin-bottom: 2px;
+
+			border-radius: 8px;
+
+			color: white;
+			background-color: black;
+
+			display: inline-flex;
+			justify-content: space-between;
+			align-items: center;
 		}
 
-		.player.red {
-			border-color: red;
-			background-color: lightcoral;
+		/* body>aside#left>div>.player {
+			background-color: #1f8e4b;
+		}
+
+		body>aside#right>div>.player {
+			background-color: #403dbc;
+		} */
+
+		body>aside>div>.player>span {
+			margin-left: 20px;
+			margin-right: 20px;
+
+			font-weight: 700;
+		}
+
+		body>aside>div>.player>span>b {
+			border-radius: 5px;
+			height: 19px;
+			width: 22px;
+			display: inline-block;
+			text-align: center;
+			margin-right: 12px;
+		}
+
+		body>aside#left>div>.player>span>b {
+			background-color: #3c993c;
+		}
+
+		body>aside#right>div>.player>span>b {
+			background-color: #2c2ca6;
+		}
+	</style>
+
+	<style>
+		header {
+			position: relative;
+
+			min-width: 400px;
+			width: 50%;
+			height: 60px;
+
+			border-radius: 18px;
+
+			display: flex;
+			justify-content: space-evenly;
+			align-items: center;
+
+			color: white;
+			background-color: black;
+
+			font-size: 18px;
+			font-weight: 900;
+		}
+
+		header::before {
+			content: "";
+			position: absolute;
+			z-index: -1;
+
+			height: 100%;
+			width: 100%;
+
+			padding: 4px;
+			border-radius: 22px;
+
+			background: url(../assets/border.png);
+			background-position-x: 0%;
+			background-position-y: 0%;
+			background-size: auto;
+			background-size: 408px;
+			background-position-x: 0px;
+			background-position-y: 482px;
+		}
+
+		header>span {
+			height: 145%;
+			width: 70px;
+			border-radius: 22px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 29px;
+		}
+
+		header>span:first-child {
+			background-image: url(../assets/green.jfif);
+			background-position-x: -7px;
+			background-size: 180px;
+			background-position-y: -3px;
+		}
+
+		header>span:last-child {
+			background-image: url(../assets/blue.jfif);
+			background-position-x: -7px;
+			background-size: 180px;
+			background-position-y: -3px;
+		}
+
+		footer {
+			position: relative;
+
+			width: calc(100% - 8px);
+			height: 60px;
+
+			display: flex;
+			justify-content: space-evenly;
+			align-items: center;
+
+			border-radius: 18px;
+
+			background-color: black;
+			color: white;
+		}
+
+		footer::before {
+			content: "";
+			position: absolute;
+			z-index: -1;
+
+			height: 100%;
+			width: 100%;
+
+			padding: 4px;
+			border-radius: 22px;
+
+			background: url(../assets/border.png);
+			background-position-x: 0%;
+			background-position-y: 0%;
+			background-size: auto;
+			background-size: 100%;
+			background-position-x: 0px;
+			background-position-y: -100px;
+		}
+
+		footer>div {
+			height: calc(100% - 40px);
+			width: calc(100% - 40px);
+
+			border: 2px solid #494949;
+			border-radius: 20px;
+
+			background-image: url(../assets/blue.jfif);
+			background-position: start;
+			background-size: 120px;
+		}
+
+		footer>div>div {
+			height: 100%;
+			width: 50%;
+
+			border-radius: 10px;
+
+			background-image: url(../assets/green.jfif);
+			background-position: start;
+			background-size: 120px;
+
+			display: flex;
+			justify-content: end;
+
+			transition: width .5s ease-in-out;
+		}
+
+		footer>div>div>img {
+			position: relative;
+			top: -43px;
+			left: 39px;
+
+			height: 110px;
 		}
 	</style>
 </head>
@@ -160,33 +375,37 @@
 	</aside>
 
 	<article id="center">
-		<header>
-			GRÜN
-			<span id="span-green-goals"><i>X</i></span>
-			:
-			<span id=""><i>X</i></span>
-			BLAU
-		</header>
+		<div>
+			<header>
+				GRÜN
+				<span id="span-green-goals"><i>X</i></span>
+				:
+				<span id=""><i>X</i></span>
+				BLAU
+			</header>
 
-		<section>
-			<!-- Grün -->
-			<div id="container-green-goalkeeper"></div>
-			<div id="container-green-defenders"></div>
-			<div id="container-green-midfielders"></div>
-			<div id="container-green-strikers"></div>
+			<section>
+				<!-- Grün -->
+				<div id="container-green-goalkeeper"></div>
+				<div id="container-green-defenders"></div>
+				<div id="container-green-midfielders"></div>
+				<div id="container-green-strikers"></div>
 
-			<!-- Blau -->
-			<div id="container-blue-strikers"></div>
-			<div id="container-blue-midfielders"></div>
-			<div id="container-blue-defenders"></div>
-			<div id="container-blue-goalkeeper"></div>
-		</section>
+				<!-- Blau -->
+				<div id="container-blue-strikers"></div>
+				<div id="container-blue-midfielders"></div>
+				<div id="container-blue-defenders"></div>
+				<div id="container-blue-goalkeeper"></div>
+			</section>
 
-		<footer>
-			<div class="progress-bar-border">
-				<div class="progress-bar-fill-in"></div>
-			</div>
-		</footer>
+			<footer>
+				<div class="progress-bar-border">
+					<div class="progress-bar-fill-in">
+						<img src="../assets/football.png" alt="">
+					</div>
+				</div>
+			</footer>
+		</div>
 	</article>
 
 	<aside id="right">
@@ -286,7 +505,7 @@
 
 	window.onload = (() => {
 		update();
-		setInterval(update, 15000);
+		// setInterval(update, 15000);
 	})();
 </script>
 
@@ -294,14 +513,12 @@
 	function createPlayerCard(player) {
 		let card = document.createElement("div");
 		let name = document.createElement("span");
-		let timer = document.createElement("span");
+		let fatigue = document.createElement("span");
+
+		name.appendChild(fatigue)
 
 		card.id = player.id
-		name.innerText = player.name;
-		timer.style = "display: none;";
-		timer.innerText =
-			`${Math.floor(player.punishment_time / 60)}m ` +
-			`${Math.floor(player.punishment_time % 60)}s`;
+		name.innerHTML = `<b>${Math.floor(Math.min(100 - player.fatigue, 99))}</b>${player.name.toUpperCase()}`;
 
 		card.classList.add("player");
 
@@ -311,11 +528,10 @@
 			else if (player.punishment == "YELLOW")
 				card.classList.add("yellow");
 
-			timer.style = "display: block;";
+			fatigue.style = "display: block;";
 		}
 
 		card.appendChild(name);
-		card.appendChild(timer);
 
 		return card;
 	}
