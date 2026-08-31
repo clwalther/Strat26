@@ -106,7 +106,7 @@
 
 			background:
 				linear-gradient(#fff0 35%, #fff 50%),
-				url(../assets/blue.png);
+				url(../assets/green.png);
 			background-position-x: center;
 			background-position-y: 46px;
 			background-size: contain;
@@ -157,7 +157,7 @@
 </head>
 
 <body>
-	<h2>Mannschaft <b style="color: blue">Blau</b> - Aufstellung <span id="span-line-up"><i>wird
+	<h2>Mannschaft <b style="color: green">Grün</b> - Aufstellung <span id="span-line-up"><i>wird
 				geladen...</i>
 	</h2>
 
@@ -200,11 +200,10 @@
 </script>
 
 <script>
-	const TEAM = "blau";
+	const TEAM = "grün";
 	let players;
 
 	async function update() {
-
 		const resp = await fetch("/api/players");
 
 		if (resp.status == 200) {

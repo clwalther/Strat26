@@ -56,7 +56,7 @@ class Database():
 
 			fatigue INT NOT NULL DEFAULT 0,
 
-			punishment VARCHAR(100) DEFAULT NULL,
+			punishment VARCHAR(100) DEFAULT 'NONE',
 			punishment_time TIMESTAMP DEFAULT NULL,
 
 			role VARCHAR(100) NOT NULL,
@@ -211,8 +211,10 @@ class Database():
 
 					"fatigue": row[10],
 
-					"punish": row[11],
-					"punish_time": row[12],
+					"punishment": row[11],
+					"punishment_time": (None if row[12] is None else
+						(datetime.datetime.strptime(row[12], "%Y-%m-%d %H:%M:%S").replace(tzinfo=datetime.timezone.utc) -
+						datetime.datetime.now(datetime.timezone.utc)).total_seconds()),
 
 					"role": row[13],
 					"position": row[14]
@@ -250,10 +252,10 @@ class Database():
 
 	def set_player(self, player) -> int:
 		try:
-			con = self.connection()
-			cur = con.cursor()
+			connection = self.connection()
+			cursor = connection.cursor()
 
-			cur.execute(f"""UPDATE players SET
+			cursor.execute(f"""UPDATE players SET
 					pac = {player['pac']},
 					sho = {player['sho']},
 					pas = {player['pas']},
@@ -264,8 +266,53 @@ class Database():
 				WHERE
 					id = {player['id']};""")
 
-			con.commit()
-			con.close()
+			connection.commit()
+			connection.close()
+
+		except sqlite3.Error as error:
+			print(f"DATABASE ERROR: FATAL: {error}")
+			return -1
+		return 0
+
+	def set_punishment(self, player) -> int:
+		try:
+			connection = self.connection()
+			cursor = connection.cursor()
+
+			if player['punishment'] == "RED":
+				minutes = 15
+				cursor.execute(f"""UPDATE players SET
+						punishment = '{player['punishment']}',
+						punishment_time = '{(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")}',
+						role = 'BENCH',
+						position = -1
+					WHERE
+						id = {player['id']};""")
+			elif player['punishment'] == "DOUBLE":
+				minutes = 10
+				cursor.execute(f"""UPDATE players SET
+						punishment = '{player['punishment']}',
+						punishment_time = '{(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")}',
+						role = 'BENCH',
+						position = -1
+					WHERE
+						id = {player['id']};""")
+			elif player['punishment'] == "YELLOW":
+				minutes = 5
+				cursor.execute(f"""UPDATE players SET
+						punishment = '{player['punishment']}',
+						punishment_time = '{(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")}'
+					WHERE
+						id = {player['id']};""")
+			else:
+				cursor.execute(f"""UPDATE players SET
+						punishment = '{player['punishment']}',
+						punishment_time = NULL
+					WHERE
+						id = {player['id']};""")
+
+			connection.commit()
+			connection.close()
 
 		except sqlite3.Error as error:
 			print(f"DATABASE ERROR: FATAL: {error}")

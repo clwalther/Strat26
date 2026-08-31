@@ -50,11 +50,7 @@
 </script>
 
 <script>
-	let timeLoaded = NaN;
-	let clockRunning = false;
-
 	async function update() {
-		// reset all buttons to disabled
 		resetDOM();
 
 		const start = performance.now();
@@ -64,15 +60,13 @@
 		if (resp.status == 200) {
 			const data = await resp.json();
 
-			timeLoaded = end;
-
 			span_status.innerText = data.status;
-			span_duration.innerText =
-				`${Math.floor(data.duration / 3600)} hrs ` +
-				`${Math.floor(data.duration / 60) % 60} min ` +
-				`${Math.floor(data.duration) % 60} sec`;
-			span_connection.innerText = `${Math.round(end - start)} ms`;
 			span_version.innerText = data.version;
+			span_connection.innerText = `${Math.round(end - start)} ms`;
+			span_duration.innerText =
+				`${Math.floor(data.duration / 3600)}h ` +
+				`${Math.floor(data.duration / 60) % 60}m ` +
+				`${Math.floor(data.duration) % 60}s`;
 
 			if (data.status == "PAUSED") {
 				button_start.removeAttribute("disabled");
@@ -82,11 +76,6 @@
 			} else if (data.status == "RUNNING") {
 				button_pause.removeAttribute("disabled");
 				button_backup.removeAttribute("disabled");
-
-				if (!clockRunning) {
-					clockRunning = true;
-					clock(data.duration);
-				}
 			}
 		} else {
 			alert(`Packet to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
@@ -104,24 +93,11 @@
 		span_version.innerText = "wird geladen...";
 	}
 
-	function clock(duration) {
-		if (clockRunning) {
-			let new_duration = duration + (performance.now() - timeLoaded) / 1000;
-
-			span_duration.innerText =
-				`${Math.floor(new_duration / 3600)} hrs ` +
-				`${Math.floor(new_duration / 60) % 60} min ` +
-				`${Math.floor(new_duration) % 60} sec`;
-
-			setTimeout(() => clock(duration), 1000);
-		}
-	}
-
-	update();
+	window.onload = update();
 </script>
 
 <script>
-	button_start.addEventListener("click", async () => {
+	button_start.addEventListener("click", async (_) => {
 		let resp = await fetch("/api/status", {
 			method: "POST",
 			headers: {
@@ -139,7 +115,7 @@
 		}
 	});
 
-	button_pause.addEventListener("click", async () => {
+	button_pause.addEventListener("click", async (_) => {
 		let resp = await fetch("/api/status", {
 			method: "POST",
 			headers: {
@@ -157,7 +133,7 @@
 		}
 	});
 
-	button_backup.addEventListener("click", async () => {
+	button_backup.addEventListener("click", async (_) => {
 		let resp = await fetch("/api/backup", {
 			method: "POST"
 		});

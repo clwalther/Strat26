@@ -65,6 +65,10 @@ class Handler(SimpleHTTPRequestHandler):
 			self.path = "/interface-blue.html"
 			super().do_GET()
 
+		elif self.path == "/interface-green" or self.path == "/interface-green/":
+			self.path = "/interface-green.html"
+			super().do_GET()
+
 		else:
 			super().do_GET()
 
@@ -125,6 +129,25 @@ class Handler(SimpleHTTPRequestHandler):
 				player = request.get("player")
 
 				succ = db.set_player(player)
+
+				if succ == 0:
+					self.send_response(200)
+					self.end_headers()
+				else:
+					self.send_error(500, "Database Problems")
+
+			except json.JSONDecodeError:
+				self.send_error(400, "Invalid JSON")
+
+		elif self.path == "/api/punishment":
+			length = int(self.headers.get("Content-Length", 0))
+			body = self.rfile.read(length)
+
+			try:
+				request = json.loads(body)
+				player = request.get("player")
+
+				succ = db.set_punishment(player)
 
 				if succ == 0:
 					self.send_response(200)
