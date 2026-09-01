@@ -1,5 +1,4 @@
 database/*.db
-source/assets/*
 venv/
 __pycache__/
 help.py

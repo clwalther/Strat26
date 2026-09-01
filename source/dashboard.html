@@ -103,7 +103,6 @@
 			cursor: pointer;
 		}
 
-
 		body.focus-left>article,
 		body.focus-right>article {
 			width: max(calc(min(100vw, calc((100vh - 260px) * 2600/1450)) + 12px), 500px);
@@ -163,28 +162,98 @@
 
 		body>article>div>section>div {
 			width: calc(100% / 8);
+
+			display: grid;
+			align-content: space-around;
 		}
 	</style>
 
 	<style>
 		/* === SECTION === */
-		body>article>section>div>.player {
-			height: 70px;
-			width: 75px;
+		body>article>div>section>div>.player {
+			position: relative;
 
-			margin: 2px;
-			border: 2px solid black;
+			width: 75%;
+			aspect-ratio: 1 / 1;
 
-			display: grid;
+			margin: 12.5%;
 
-			align-content: space-evenly;
-			justify-items: center;
-			text-align: center;
-
+			background-repeat: no-repeat;
+			background-position: center;
+			background-size: contain;
 
 			overflow: hidden;
-			font-size: 10px;
 		}
+
+		body>article>div>section>div>.player>span.name {
+			position: absolute;
+			bottom: 0;
+
+			width: calc(100% - 2*6% - 2*8px);
+
+			display: block;
+
+			padding: 6%;
+			border-radius: 8px;
+
+			background: black;
+			color: white;
+
+			font-weight: 700;
+			text-align: center;
+
+			overflow: hidden;
+			text-overflow: ellipsis;
+			text-wrap: nowrap;
+
+			border: 2px solid #494949;
+		}
+
+		body>article>div>section>div>.player>span.fatigue {
+			position: absolute;
+			top: 29%;
+
+			color: white;
+			width: 100%;
+
+			font-weight: 900;
+			font-size: 17px;
+
+			text-align: center;
+		}
+
+		body>article>div>section>div>.player>span.punishment {
+			position: absolute;
+			top: 0;
+			right: 0;
+
+			font-weight: 900;
+			font-size: 17px;
+
+			text-align: end;
+		}
+
+		body>article>div>section>div#container-green-goalkeeper>div.player {
+			background-image: url(../assets/orange-trans.png);
+		}
+
+		body>article>div>section>div#container-green-defenders>div.player,
+		body>article>div>section>div#container-green-midfielders>div.player,
+		body>article>div>section>div#container-green-strikers>div.player {
+			background-image: url(../assets/green-trans.png);
+		}
+
+		body>article>div>section>div#container-blue-goalkeeper>div.player {
+			background-image: url(../assets/purple-trans.png);
+		}
+
+		body>article>div>section>div#container-blue-defenders>div.player,
+		body>article>div>section>div#container-blue-midfielders>div.player,
+		body>article>div>section>div#container-blue-strikers>div.player {
+			background-image: url(../assets/blue-trans.png);
+		}
+
+
 
 		/* === ASIDE === */
 		body>aside>div>.player {
@@ -452,16 +521,16 @@
 						containerBlueBench.insertBefore(playerCard, containerBlueBench.childNodes[player.position]);
 						break;
 					case "GOALKEEPER":
-						containerBlueGoalkeeper.insertBefore(playerCard, containerBlueGoalkeeper.childNodes[player.position]);
+						containerBlueGoalkeeper.insertBefore(playerCard, containerBlueGoalkeeper.childNodes[0]);
 						break;
 					case "DEFENDERS":
-						containerBlueDefenders.insertBefore(playerCard, containerBlueDefenders.childNodes[player.position]);
+						containerBlueDefenders.insertBefore(playerCard, containerBlueDefenders.childNodes[0]);
 						break;
 					case "MIDFIELDERS":
-						containerBlueMidfielders.insertBefore(playerCard, containerBlueMidfielders.childNodes[player.position]);
+						containerBlueMidfielders.insertBefore(playerCard, containerBlueMidfielders.childNodes[0]);
 						break;
 					case "STRIKERS":
-						containerBlueStrikers.insertBefore(playerCard, containerBlueStrikers.childNodes[player.position]);
+						containerBlueStrikers.insertBefore(playerCard, containerBlueStrikers.childNodes[0]);
 						break;
 
 					default:
@@ -498,7 +567,14 @@
 
 	window.onload = (() => {
 		update();
-		// setInterval(update, 15000);
+
+		setInterval(() => {
+			const interval = 5; // in seconds
+
+			if (Math.floor(Date.now() / 1000) % 60 % interval == 0) {
+				update();
+			}
+		}, 1000);
 	})();
 </script>
 
@@ -507,24 +583,37 @@
 		let card = document.createElement("div");
 		let name = document.createElement("span");
 		let fatigue = document.createElement("span");
-
-		name.appendChild(fatigue)
+		let punishment = document.createElement("span");
 
 		card.id = player.id
-		name.innerHTML = `<b>${Math.floor(Math.min(100 - player.fatigue, 99))}</b>${player.name.toUpperCase()}`;
-
 		card.classList.add("player");
 
 		if (player.punishment_time > 0) {
-			if (player.punishment == "RED" || player.punishment == "DOUBLE")
-				card.classList.add("red");
+			if (player.punishment == "RED")
+				punishment.innerText = "🟥";
+			else if (player.punishment == "DOUBLE")
+				punishment.innerText = "🟨🟥";
 			else if (player.punishment == "YELLOW")
-				card.classList.add("yellow");
-
-			fatigue.style = "display: block;";
+				punishment.innerText = "🟨";
 		}
 
-		card.appendChild(name);
+		if (player.role == "BENCH") {
+			name.innerHTML = `<b>${Math.floor(Math.min(100 - player.fatigue, 99))}</b>${player.name.toUpperCase()}`;
+
+			card.appendChild(name);
+			card.appendChild(punishment);
+		} else {
+			name.classList.add("name");
+			fatigue.classList.add("fatigue");
+			punishment.classList.add("punishment");
+
+			name.innerText = `${player.name.toUpperCase()}`;
+			fatigue.innerText = `${Math.floor(Math.min(100 - player.fatigue, 99))}`;
+
+			card.append(name);
+			card.append(fatigue);
+			card.appendChild(punishment);
+		}
 
 		return card;
 	}
