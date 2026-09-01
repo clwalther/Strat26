@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+
+	<style>
+		body {
+			position: absolute;
+			top: 0;
+			left: 0;
+
+			margin: 0;
+
+			height: 100vh;
+			width: 100vw;
+
+			display: flex;
+			justify-content: center;
+
+			overflow: hidden;
+		}
+
+
+		body.focus-left {
+			transform: translateX(50%);
+		}
+
+		body.focus-right {
+			transform: translateX(-50%);
+		}
+
+		body.focus-right>#center,
+		body.focus-left>#center {
+			width: 100%;
+		}
+
+		aside {
+			min-width: 200px;
+			background-color: green;
+		}
+
+		article {
+			height: 100%;
+			width: 50%;
+		}
+
+		article>div {
+			height: 100%;
+
+			display: flex;
+		}
+
+		article>div>div {
+			width: 50%;
+			height: 100%;
+		}
+
+		article>div>div:first-child {
+			background-color: red;
+		}
+
+		article>div>div:last-child {
+			background-color: blue;
+		}
+	</style>
+</head>
+
+<body id="body">
+	<aside id="left"></aside>
+	<article id="center">
+		<div>
+			<div></div>
+			<div></div>
+		</div>
+	</article>
+	<aside id="right"></aside>
+</body>
+
+<script>
+	const body = document.getElementById("body")
+	const left = document.getElementById("left");
+	const center = document.getElementById("center");
+	const right = document.getElementById("right");
+
+	left.addEventListener("click", (_) => {
+		body.classList.remove("focus-right");
+		body.classList.add("focus-left");
+	})
+
+	center.addEventListener("click", (_) => {
+		body.classList.remove("focus-left");
+		body.classList.remove("focus-right");
+	})
+
+	right.addEventListener("click", (_) => {
+		body.classList.remove("focus-left");
+		body.classList.add("focus-right");
+	})
+</script>
+
+</html>
