@@ -1,6 +1,7 @@
 import json
 import shutil
 import datetime
+import threading
 from http.server import ThreadingHTTPServer
 from http.server import SimpleHTTPRequestHandler
 
@@ -17,13 +18,13 @@ class Handler(SimpleHTTPRequestHandler):
 			duration = db.get_duration()
 			version = db.get_version()
 
-			if (status is not None
-					and duration is not None
-					and version is not None):
+			if (status != -1
+					and duration != -1
+					and version != -1):
 				response = json.dumps({
 					"status": status,
 					"duration": duration,
-					"version": version
+					"version": f"SQLite {version}"
 				}).encode("utf-8")
 
 				self.send_response(200)
@@ -38,7 +39,7 @@ class Handler(SimpleHTTPRequestHandler):
 		elif self.path == "/api/players":
 			players = db.get_players()
 
-			if players is not None:
+			if players != -1:
 				response = json.dumps({
 					"players": players,
 				}).encode("utf-8")
@@ -81,9 +82,16 @@ class Handler(SimpleHTTPRequestHandler):
 				request = json.loads(body)
 				status = request.get("status")
 
+				curr = db.get_status()
 				succ = db.set_status(status)
 
-				if succ == 0:
+				if succ == 0 and curr != -1:
+					if curr != status and status == "RUNNING":
+						start()
+
+					elif curr != status and status == "PAUSED":
+						stop()
+
 					self.send_response(200)
 					self.end_headers()
 				else:
@@ -161,31 +169,41 @@ class Handler(SimpleHTTPRequestHandler):
 		else:
 			self.send_error(404)
 
+def start(time=None, call_index = 0):
+	global timer
+
+	now = datetime.datetime.now(datetime.timezone.utc)
+	dt = (now - time).total_seconds() if time is not None else 0
+	call_index += 1
+
+	internal_update(dt, call_index)
+
+	# init timer
+	timer = threading.Timer(INTERVAL, start, [now, call_index])
+	timer.start()
+
+def stop():
+	global timer
+
+	timer.cancel()
+
+def internal_update(dt, call_index):
+	print(f"#{call_index} dt={dt}")
 
 
 if __name__ == "__main__":
+	INTERVAL = 10 # sec
+
+	timer = None
 	db = Database("./database/database.db")
 	fs = ThreadingHTTPServer(("0.0.0.0", 8080), Handler)
-
-	# # ===========
-	# con = db.connection()
-	# cur = con.cursor()
-
-	# cur.execute("SELECT * FROM timetable;")
-	# for row in cur.fetchall():
-	# 	print(row)
-	# cur.execute("SELECT * FROM players;")
-	# for row in cur.fetchall():
-	# 	print(row)
-
-	# con.commit()
-	# con.close()
-	# # ===========
 
 	print("Server running at http://localhost:8080")
 
 	try:
 		fs.serve_forever()
+	except ConnectionAbortedError:
+		print("Connection aborted...")
 	except KeyboardInterrupt:
 		fs.server_close()
 		db.shutdown()

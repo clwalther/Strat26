@@ -32,8 +32,6 @@
 
 			font-family: Arial, Helvetica, sans-serif;
 			font-size: 13px;
-
-			overflow: hidden;
 		}
 
 		body::after {
@@ -91,10 +89,12 @@
 		}
 
 		body>article {
+			--width: calc(100vw - 2*240px - 2*50px);
+
 			display: grid;
 			justify-items: center;
 
-			width: max(calc(min(50vw, calc((100vh - 260px) * 2600/1450)) + 12px), 500px);
+			width: max(calc(min(var(--width), calc((100vh - 260px) * 2600/1450)) + 12px), 500px);
 			height: calc(100% - 26px - 26px);
 
 			padding-top: 26px;
@@ -105,14 +105,14 @@
 
 		body.focus-left>article,
 		body.focus-right>article {
-			width: max(calc(min(100vw, calc((100vh - 260px) * 2600/1450)) + 12px), 500px);
+			width: max(calc(min(2*var(--width), calc((100vh - 260px) * 2600/1450)) + 12px), 500px);
 			height: calc(100% - 26px - 26px);
 		}
 
 		body.focus-left>article>div>section,
 		body.focus-right>article>div>section {
-			width: max(min(100vw, calc((100vh - 260px) * 2600/1450)), calc(500px - 12px));
-			height: max(min(calc(100vw * 1450/2600), calc(100vh - 260px)), calc(500px - 12px) * 1450/2600);
+			width: max(min(2*var(--width), calc((100vh - 260px) * 2600/1450)), calc(500px - 12px));
+			height: max(min(calc(2*var(--width) * 1450/2600), calc(100vh - 260px)), calc(500px - 12px) * 1450/2600);
 		}
 
 		body>article>div {
@@ -127,8 +127,8 @@
 		body>article>div>section {
 			position: relative;
 
-			width: max(min(50vw, calc((100vh - 260px) * 2600/1450)), calc(500px - 12px));
-			height: max(min(calc(50vw * 1450/2600), calc(100vh - 260px)), calc(500px - 12px) * 1450/2600);
+			width: max(min(var(--width), calc((100vh - 260px) * 2600/1450)), calc(500px - 12px));
+			height: max(min(calc(var(--width) * 1450/2600), calc(100vh - 260px)), calc(500px - 12px) * 1450/2600);
 
 			background-image: url(../assets/pitch.png);
 			background-position: center;
@@ -217,7 +217,7 @@
 			width: 100%;
 
 			font-weight: 900;
-			font-size: 17px;
+			font-size: 15px;
 
 			text-align: center;
 		}
@@ -278,12 +278,15 @@
 			margin-right: 20px;
 
 			font-weight: 700;
+
+			text-wrap: nowrap;
 		}
 
 		body>aside>div>.player>span>b {
 			border-radius: 5px;
-			height: 19px;
-			width: 22px;
+			padding-left: 4px;
+			padding-right: 4px;
+
 			display: inline-block;
 			text-align: center;
 			margin-right: 12px;
@@ -302,7 +305,8 @@
 		header {
 			position: relative;
 
-			width: 400px;
+			min-width: 400px;
+			width: 60%;
 			height: 60px;
 
 			border-radius: 18px;
