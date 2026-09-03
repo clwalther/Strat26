@@ -11,6 +11,11 @@
 	<script src="../interface.js" defer></script>
 
 	<style>
+		h2 {
+			display: flex;
+			justify-content: space-between;
+		}
+
 		article {
 			display: flex;
 
@@ -157,8 +162,16 @@
 </head>
 
 <body>
-	<h2>Mannschaft <b style="color: blue">Blau</b> - Aufstellung <span id="span-line-up"><i>wird
-				geladen...</i>
+	<h2>
+		<div>
+			Mannschaft <b style="color: blue">Blau</b> - Aufstellung <span
+				id="span-line-up"><i>wirdgeladen...</i></span>
+		</div>
+		<div>
+			<button id="button-dec">-</button>
+			<span id="span-score">X</span>
+			<button id="button-inc">+</button>
+		</div>
 	</h2>
 
 	<article>
@@ -183,6 +196,10 @@
 </body>
 
 <script>
+	const buttonDec = document.getElementById('button-dec');
+	const spanScore = document.getElementById('span-score');
+	const buttonInc = document.getElementById('button-inc');
+
 	const containerStrikers = document.getElementById("container-strikers");
 	const containerMidfielders = document.getElementById("container-midfielders");
 	const containerDefenders = document.getElementById("container-defenders");
@@ -202,16 +219,22 @@
 <script>
 	const TEAM = "blau";
 	let players;
+	let score;
 
 	async function update() {
+		const respPlayers = await fetch("/api/players");
+		const respScore = await fetch("/api/score");
 
-		const resp = await fetch("/api/players");
+		if (respPlayers.status == 200 && respScore.status == 200) {
+			const dataPlayers = await respPlayers.json();
+			const dataScore = await respScore.json();
 
-		if (resp.status == 200) {
-			const data = await resp.json();
-			players = data.players;
+			players = dataPlayers.players;
+			score = dataScore.score[TEAM];
 
 			resetDOM();
+
+			spanScore.innerText = score;
 
 			players.forEach(player => {
 				if (player.team === TEAM) {
@@ -244,13 +267,15 @@
 				}
 			});
 		} else {
-			alert(`Packet to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+			alert(`Packet to ${respPlayers.url} failed with status: ${respPlayers.status} ${respPlayers.statusText}`);
 		}
 
 		updateDOM();
 	}
 
 	function resetDOM() {
+		spanScore.innerText = 'X';
+
 		containerStrikers.innerHTML = "";
 		containerMidfielders.innerHTML = "";
 		containerDefenders.innerHTML = "";
@@ -349,6 +374,44 @@
 
 		})
 	});
+
+	buttonDec.addEventListener('click', async (_) => {
+		resp = await fetch('/api/score', {
+			method: 'POST',
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				'team': TEAM,
+				"score": score - 1,
+			})
+		});
+
+		if (resp.status == 200) {
+			update();
+		} else {
+			alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+	})
+
+	buttonInc.addEventListener('click', async (_) => {
+		resp = await fetch('/api/score', {
+			method: 'POST',
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				'team': TEAM,
+				"score": score + 1,
+			})
+		});
+
+		if (resp.status == 200) {
+			update();
+		} else {
+			alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+	})
 </script>
 
 <script>

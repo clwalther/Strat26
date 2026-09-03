@@ -253,8 +253,6 @@
 			background-image: url(../assets/blue-trans.png);
 		}
 
-
-
 		/* === ASIDE === */
 		body>aside>div>.player {
 			height: 36px;
@@ -446,7 +444,7 @@
 				GRÜN
 				<span id="span-green-goals"><i>X</i></span>
 				:
-				<span id=""><i>X</i></span>
+				<span id="span-blue-goals"><i>X</i></span>
 				BLAU
 			</header>
 
@@ -466,7 +464,7 @@
 
 			<footer>
 				<div class="progress-bar-border">
-					<div class="progress-bar-fill-in">
+					<div class="progress-bar-fill-in" id="bar-momentum">
 						<img src="../assets/football.png" alt="">
 					</div>
 				</div>
@@ -481,7 +479,7 @@
 
 <script>
 	const spanGreenGoals = document.getElementById("span-green-goals");
-	const spanBlueGoals = document.getElementById("spgoals");
+	const spanBlueGoals = document.getElementById("span-blue-goals");
 
 	const containerGreenBench = document.getElementById("container-green-bench");
 	const containerGreenGoalkeeper = document.getElementById("container-green-goalkeeper");
@@ -494,6 +492,8 @@
 	const containerBlueDefenders = document.getElementById("container-blue-defenders");
 	const containerBlueMidfielders = document.getElementById("container-blue-midfielders");
 	const containerBlueStrikers = document.getElementById("container-blue-strikers");
+
+	const barMomentum = document.getElementById("bar-momentum");
 </script>
 
 <script>
@@ -508,13 +508,42 @@
 		}
 	}
 
+	async function fetchScore() {
+		const resp = await fetch("/api/score");
+
+		if (resp.status == 200) {
+			const data = await resp.json("score");
+			return data;
+		} else {
+			alert(`Packet to ${resp.url} failed with statu: ${resp.status} ${resp.statusText}`);
+		}
+	}
+
+	async function fetchMomentum() {
+		const resp = await fetch("/api/momentum");
+
+		if (resp.status == 200) {
+
+			const data = await resp.json("momentum");
+			return data.momentum;
+		} else {
+			alert(`Packet to ${resp.url} failed with statu: ${resp.status} ${resp.statusText}`);
+		}
+	}
+
 	async function update() {
 		let players = await fetchPlayers();
+		let game = await fetchScore();
 
 		resetDOM();
 
-		if (players == undefined)
+		if (players == undefined || game == undefined)
 			return;
+
+		spanGreenGoals.innerText = game.score['grün'];
+		spanBlueGoals.innerText = game.score['blau'];
+
+		barMomentum.style = `width: ${100 * game.momentum / 2 + 50}%`;
 
 		players.forEach(player => {
 			let playerCard = createPlayerCard(player);

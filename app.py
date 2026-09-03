@@ -49,7 +49,24 @@ class Handler(SimpleHTTPRequestHandler):
 				self.send_header("Content-Length", len(response))
 				self.end_headers()
 				self.wfile.write(response)
+			else:
+				self.send_error(500, "Database Problems")
 
+		elif self.path == "/api/score":
+			score = db.get_score()
+			momentum = db.get_momentum()
+
+			if momentum != -1:
+				response = json.dumps({
+					"score": score,
+					"momentum": momentum,
+				}).encode("utf-8")
+
+				self.send_response(200)
+				self.send_header("Content-Type", "application/json")
+				self.send_header("Content-Length", len(response))
+				self.end_headers()
+				self.wfile.write(response)
 			else:
 				self.send_error(500, "Database Problems")
 
@@ -162,6 +179,37 @@ class Handler(SimpleHTTPRequestHandler):
 					self.end_headers()
 				else:
 					self.send_error(500, "Database Problems")
+
+			except json.JSONDecodeError:
+				self.send_error(400, "Invalid JSON")
+
+		elif self.path == '/api/score':
+			length = int(self.headers.get("Content-Length", 0))
+			body = self.rfile.read(length)
+
+			try:
+				request = json.loads(body)
+				score = request.get("score")
+				team = request.get("team")
+
+				if team == 'blau':
+					succ = db.set_score_blue(score)
+
+					if succ == 0:
+						self.send_response(200)
+						self.end_headers()
+					else:
+						self.send_error(500, "Database Problems")
+				elif team == 'grün':
+					succ = db.set_score_green(score)
+
+					if succ == 0:
+						self.send_response(200)
+						self.end_headers()
+					else:
+						self.send_error(500, "Database Problems")
+				else:
+					self.send_error(300, 'Invalid data given to the server')
 
 			except json.JSONDecodeError:
 				self.send_error(400, "Invalid JSON")

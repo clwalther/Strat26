@@ -37,6 +37,8 @@ class Database():
 
 		self._init_timetable()
 		self._init_players()
+		self._init_score()
+		self._init_momentum()
 
 	def connection(self) -> sqlite3.Connection:
 		return sqlite3.connect(self.path)
@@ -100,22 +102,50 @@ class Database():
 		if len(players) != 52:
 			cursor.execute("DELETE FROM players;")
 
-		# Repopulate players
-		for player in init_players:
-			cursor.execute(f"""INSERT INTO players
-			(name, team, pac, sho, pas, dri, def, phy, role, position)
-			VALUES (
-				'{player['name']}',
-				'{player['team']}',
-				{player['pac']},
-				{player['sho']},
-				{player['pas']},
-				{player['dri']},
-				{player['def']},
-				{player['phy']},
-				'{player['role']}',
-				{player['position']}
-			);""")
+			# Repopulate players
+			for player in init_players:
+				cursor.execute(f"""INSERT INTO players
+				(name, team, pac, sho, pas, dri, def, phy, role, position)
+				VALUES (
+					'{player['name']}',
+					'{player['team']}',
+					{player['pac']},
+					{player['sho']},
+					{player['pas']},
+					{player['dri']},
+					{player['def']},
+					{player['phy']},
+					'{player['role']}',
+					{player['position']}
+				);""")
+
+	@safe_access
+	def _init_score(self, cursor) -> None:
+		cursor.execute("DROP TABLE IF EXISTS score;") # <---- ONLY DEV
+		cursor.execute("""CREATE TABLE IF NOT EXISTS score (
+			green INT NOT NULL, blue INT NOT NULL
+		);""")
+
+		cursor.execute('SELECT * FROM score;')
+
+		players = cursor.fetchall()
+
+		if len(players) == 0:
+			cursor.execute('INSERT INTO score (green, blue) VALUES (0, 0);')
+
+	@safe_access
+	def _init_momentum(self, cursor) -> None:
+		cursor.execute("DROP TABLE IF EXISTS momentum;") # <---- ONLY DEV
+		cursor.execute("""CREATE TABLE IF NOT EXISTS momentum (
+			momentum DOUBLE NOT NULL
+		);""")
+
+		cursor.execute('SELECT * FROM momentum;')
+
+		players = cursor.fetchall()
+
+		if len(players) == 0:
+			cursor.execute('INSERT INTO momentum (momentum) VALUES (0);')
 
 	# Methods
 	@safe_access
@@ -240,5 +270,31 @@ class Database():
 					punishment_time = NULL
 				WHERE
 					id = {player['id']};""")
+
+		return 0
+
+	@safe_access
+	def get_score(self, cursor) -> list[int]:
+		cursor.execute(f"SELECT green, blue FROM score;")
+		score =  cursor.fetchall()[0]
+
+		return {'grün': score[0], 'blau': score[1]}
+
+	@safe_access
+	def get_momentum(self, cursor) -> float:
+		cursor.execute("SELECT * FROM momentum;")
+		momentum = cursor.fetchall()[0][0]
+
+		return momentum
+
+	@safe_access
+	def set_score_blue(self, cursor, score) -> float:
+		cursor.execute(f"UPDATE score SET blue = {score};")
+
+		return 0
+
+	@safe_access
+	def set_score_green(self, cursor, score) -> float:
+		cursor.execute(f"UPDATE score SET green = {score};")
 
 		return 0
