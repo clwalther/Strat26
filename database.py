@@ -58,7 +58,7 @@ class Database():
 	# Init
 	@safe_access
 	def _init_timetable(self, cursor) -> None:
-		# cursor.execute("DROP TABLE IF EXISTS timetable") # <---- ONLY DEV
+		cursor.execute("DROP TABLE IF EXISTS timetable") # <---- ONLY DEV
 		cursor.execute("""CREATE TABLE IF NOT EXISTS timetable (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			status VARCHAR(100) NOT NULL,
@@ -85,7 +85,7 @@ class Database():
 			phy INT NOT NULL,
 			dop INT NOT NULL DEFAULT 0,
 
-			fatigue INT NOT NULL DEFAULT 0,
+			fatigue DOUBLE NOT NULL DEFAULT 0,
 
 			punishment VARCHAR(100) DEFAULT 'NONE',
 			punishment_time TIMESTAMP DEFAULT NULL,
@@ -137,7 +137,7 @@ class Database():
 	def _init_momentum(self, cursor) -> None:
 		cursor.execute("DROP TABLE IF EXISTS momentum;") # <---- ONLY DEV
 		cursor.execute("""CREATE TABLE IF NOT EXISTS momentum (
-			momentum DOUBLE NOT NULL
+			momentum INT NOT NULL
 		);""")
 
 		cursor.execute('SELECT * FROM momentum;')
@@ -294,7 +294,19 @@ class Database():
 		return 0
 
 	@safe_access
-	def set_score_green(self, cursor, score) -> float:
+	def set_score_green(self, cursor, score) -> int:
 		cursor.execute(f"UPDATE score SET green = {score};")
+
+		return 0
+
+	@safe_access
+	def set_fatigue(self, cusror, fatigue, id) -> int:
+		cusror.execute(f"UPDATE players SET fatigue = {fatigue} WHERE id={id};")
+
+		return 0
+
+	@safe_access
+	def set_momentum(self, cursor, momentum) -> int:
+		cursor.execute(f"UPDATE momentum SET momentum = {momentum};")
 
 		return 0

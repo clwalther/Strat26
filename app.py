@@ -2,10 +2,13 @@ import json
 import shutil
 import datetime
 import threading
+import random
+import math
 from http.server import ThreadingHTTPServer
 from http.server import SimpleHTTPRequestHandler
 
 from database import Database
+from utils import *
 
 class Handler(SimpleHTTPRequestHandler):
 	def __init__(self, *args, **kwargs):
@@ -220,27 +223,89 @@ class Handler(SimpleHTTPRequestHandler):
 def start(time=None, call_index = 0):
 	global timer
 
-	now = datetime.datetime.now(datetime.timezone.utc)
-	dt = (now - time).total_seconds() if time is not None else 0
-	call_index += 1
+	status = db.get_status()
 
-	internal_update(dt, call_index)
+	if status != "PAUSED":
+		now = datetime.datetime.now(datetime.timezone.utc)
+		dt = (now - time).total_seconds() if time is not None else 0
+		call_index += 1
 
-	# init timer
-	timer = threading.Timer(INTERVAL, start, [now, call_index])
-	timer.start()
+		worker(dt, call_index)
+
+		# init timer
+		timer = threading.Timer(INTERVAL, start, [now, call_index])
+		timer.start()
 
 def stop():
 	global timer
 
 	timer.cancel()
 
-def internal_update(dt, call_index):
-	print(f"#{call_index} dt={dt}")
+def worker(dt, i):
+	update_fatigue(dt)
+	update_momentum(dt)
+	create_chance(dt)
+
+# === game mechanics ===
+def update_fatigue(dt):
+	players = db.get_players()
+
+	for player in players:
+		if player['role'] == 'BENCH':
+			fatigue = player['fatigue'] - FATIGUE * dt
+			db.set_fatigue(max(fatigue, 0), player['id'])
+
+		else:
+			fatigue = player['fatigue'] + 2*random.random() * FATIGUE * dt
+			db.set_fatigue(min(fatigue, 100), player['id'])
+
+def update_momentum(dt):
+	momentum = db.get_momentum()
+	players = db.get_players()
+
+	eval_blue  = get_eval("blau", players)
+	eval_green = get_eval("grün", players)
+
+	balance = eval_green / (eval_blue + eval_green)
+
+	print(
+		round(eval_green),
+		round(eval_blue),
+		f"{round(balance*100)}/{100-round(balance*100)}"
+	)
+
+	if random.random() < balance:
+		momentum += STEP * dt
+	else:
+		momentum -= STEP * dt
+
+	momentum = max(-100, momentum)
+	momentum = min(momentum, 100)
+
+	db.set_momentum(momentum)
+
+def create_chance(dt):
+	momentum = db.get_momentum()
+	score = db.get_score()
+
+	if momentum > 70:
+		# green goal
+		if random.random() < PROBABILITY:
+			db.set_score_blue(score["grün"]+1)
+			db.set_momentum(0)
+
+	if momentum < -70:
+		# blue goal
+		if random.random() < PROBABILITY:
+			db.set_score_blue(score["blau"]+1)
+			db.set_momentum(0)
 
 
 if __name__ == "__main__":
-	INTERVAL = 10 # sec
+	INTERVAL    = 5 / 5					# sec
+	FATIGUE     = (100 / 25) / 60 * 5	# fatigue / sec
+	STEP        = 1 * 5				# momentum / sec
+	PROBABILITY = 1 / 10 * 5			# probability / sec
 
 	timer = None
 	db = Database("./database/database.db")
@@ -250,8 +315,6 @@ if __name__ == "__main__":
 
 	try:
 		fs.serve_forever()
-	except ConnectionAbortedError:
-		print("Connection aborted...")
 	except KeyboardInterrupt:
 		fs.server_close()
 		db.shutdown()

@@ -312,7 +312,9 @@
 			+ containerStrikers.querySelectorAll(":scope>.player").length)}/${getAllowedAmmount()})`;
 	}
 
-	update();
+	window.addEventListener("pageshow", () => {
+		update();
+	});
 </script>
 
 <script>

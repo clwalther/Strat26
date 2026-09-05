@@ -543,7 +543,7 @@
 		spanGreenGoals.innerText = game.score['grün'];
 		spanBlueGoals.innerText = game.score['blau'];
 
-		barMomentum.style = `width: ${100 * game.momentum / 2 + 50}%`;
+		barMomentum.style = `width: ${game.momentum / 2 + 50}%`;
 
 		players.forEach(player => {
 			let playerCard = createPlayerCard(player);

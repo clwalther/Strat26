@@ -93,7 +93,9 @@
 		span_version.innerText = "wird geladen...";
 	}
 
-	window.onload = update();
+	window.addEventListener("pageshow", () => {
+		update();
+	});
 </script>
 
 <script>
