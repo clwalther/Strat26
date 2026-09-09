@@ -1,6 +1,8 @@
 import json
 import sqlite3
 import datetime
+import shutil
+
 
 with open("./players.json", "r", encoding="utf-8") as file:
 	init_players = json.load(file)
@@ -43,6 +45,27 @@ class Database():
 	def connection(self) -> sqlite3.Connection:
 		return sqlite3.connect(self.path)
 
+	def backup(self) -> None:
+		filename = datetime.datetime.now().strftime("./database/%Y-%m-%d %H.%M.%S.%f.db")
+
+		shutil.copy("./database/database.db", filename)
+		self.backup()
+
+	@safe_access
+	def reset(self, cursor) -> None:
+		cursor.execute("DROP TABLE IF EXISTS timetable")
+		cursor.execute("DROP TABLE IF EXISTS score")
+		cursor.execute("DROP TABLE IF EXISTS momentum")
+		cursor.execute("DROP TABLE IF EXISTS players")
+
+		self._init_timetable()
+		self._init_players()
+		self._init_score()
+		self._init_momentum()
+
+		return 0
+		print(f"Backed up the database: {filename}")
+
 	@safe_access
 	def shutdown(self, cursor) -> None:
 		# Gurantee that the status is 'PAUSED' when shutdown
@@ -58,7 +81,6 @@ class Database():
 	# Init
 	@safe_access
 	def _init_timetable(self, cursor) -> None:
-		cursor.execute("DROP TABLE IF EXISTS timetable") # <---- ONLY DEV
 		cursor.execute("""CREATE TABLE IF NOT EXISTS timetable (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			status VARCHAR(100) NOT NULL,
@@ -70,7 +92,6 @@ class Database():
 
 	@safe_access
 	def _init_players(self, cursor) -> None:
-		cursor.execute("DROP TABLE IF EXISTS players") # <---- ONLY DEV
 		cursor.execute("""CREATE TABLE IF NOT EXISTS players (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -121,7 +142,6 @@ class Database():
 
 	@safe_access
 	def _init_score(self, cursor) -> None:
-		cursor.execute("DROP TABLE IF EXISTS score;") # <---- ONLY DEV
 		cursor.execute("""CREATE TABLE IF NOT EXISTS score (
 			green INT NOT NULL, blue INT NOT NULL
 		);""")
@@ -135,7 +155,6 @@ class Database():
 
 	@safe_access
 	def _init_momentum(self, cursor) -> None:
-		cursor.execute("DROP TABLE IF EXISTS momentum;") # <---- ONLY DEV
 		cursor.execute("""CREATE TABLE IF NOT EXISTS momentum (
 			momentum INT NOT NULL
 		);""")

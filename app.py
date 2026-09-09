@@ -1,9 +1,7 @@
 import json
-import shutil
 import datetime
 import threading
 import random
-import math
 from http.server import ThreadingHTTPServer
 from http.server import SimpleHTTPRequestHandler
 
@@ -121,11 +119,12 @@ class Handler(SimpleHTTPRequestHandler):
 				self.send_error(400, "Invalid JSON")
 
 		elif self.path == "/api/backup":
-			filename = datetime.datetime.now().strftime("./database/%Y-%m-%d %H.%M.%S.%f.db")
+			db.backup()
+			self.send_response(200)
+			self.end_headers()
 
-			shutil.copy("./database/database.db", filename)
-			print(f"Backed up the database: {filename}")
-
+		elif self.path == "/api/reset":
+			db.reset()
 			self.send_response(200)
 			self.end_headers()
 
@@ -291,7 +290,7 @@ def create_chance(dt):
 	if momentum > 70:
 		# green goal
 		if random.random() < PROBABILITY:
-			db.set_score_blue(score["grün"]+1)
+			db.set_score_green(score["grün"]+1)
 			db.set_momentum(0)
 
 	if momentum < -70:
@@ -303,8 +302,8 @@ def create_chance(dt):
 
 if __name__ == "__main__":
 	INTERVAL    = 5 / 5					# sec
-	FATIGUE     = (100 / 25) / 60 * 5	# fatigue / sec
-	STEP        = 1 * 5				# momentum / sec
+	FATIGUE     = 100 / 40 / 60 * 5		# fatigue / sec
+	STEP        = 0.7 * 5				# momentum / sec
 	PROBABILITY = 1 / 10 * 5			# probability / sec
 
 	timer = None

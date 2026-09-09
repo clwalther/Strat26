@@ -12,9 +12,10 @@
 <body>
 	<h1>Strategiespiel 2026</h1>
 
-	<button id="button-start" type="button" disabled>Start / Resume</button>
+	<button id="button-start" type="button" disabled>Resume</button>
 	<button id="button-pause" type="button" disabled>Pause</button>
 	<button id="button-backup" type="button" disabled>Backup</button>
+	<button id="button-reset" type="button" disabled>Reset</button>
 
 	<p>
 		Spiel Status:&emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp;<span id="span-status"><i>wird geladen...</i></span>
@@ -42,6 +43,7 @@
 	const button_start = document.getElementById("button-start");
 	const button_pause = document.getElementById("button-pause");
 	const button_backup = document.getElementById("button-backup");
+	const button_reset = document.getElementById("button-reset");
 
 	const span_status = document.getElementById("span-status");
 	const span_duration = document.getElementById("span-duration");
@@ -68,15 +70,13 @@
 				`${Math.floor(data.duration / 60) % 60}m ` +
 				`${Math.floor(data.duration) % 60}s`;
 
-			if (data.status == "PAUSED") {
+			if (data.status == "PAUSED")
 				button_start.removeAttribute("disabled");
-				button_backup.removeAttribute("disabled");
-
-				clockRunning = false;
-			} else if (data.status == "RUNNING") {
+			else if (data.status == "RUNNING")
 				button_pause.removeAttribute("disabled");
-				button_backup.removeAttribute("disabled");
-			}
+
+			button_backup.removeAttribute("disabled");
+			button_reset.removeAttribute("disabled");
 		} else {
 			alert(`Packet to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
 		}
@@ -86,6 +86,7 @@
 		button_start.setAttribute("disabled", "");
 		button_pause.setAttribute("disabled", "");
 		button_backup.setAttribute("disabled", "");
+		button_reset.setAttribute("disabled", "");
 
 		span_status.innerText = "wird geladen...";
 		span_duration.innerText = "wird geladen...";
@@ -137,6 +138,18 @@
 
 	button_backup.addEventListener("click", async (_) => {
 		let resp = await fetch("/api/backup", {
+			method: "POST"
+		});
+
+		if (resp.status == 200) {
+			update();
+		} else {
+			alert(`Request to ${resp.url} failed with status: ${resp.status} ${resp.statusText}`);
+		}
+	});
+
+	button_reset.addEventListener("click", async (_) => {
+		let resp = await fetch("/api/reset", {
 			method: "POST"
 		});
 
